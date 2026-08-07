@@ -16,15 +16,15 @@ C----------------------------------------------------------------------
 C  Called by: MAIZE, SG_CERES, ML_CERES
 C  Calls:     None
 !======================================================================
-      SUBROUTINE MZ_OPGROW(CONTROL, ISWITCH, 
-     &  CANHT, CANWH, DTT, HI, HIP, KSTRES, MDATE, NLAYR, NSTRES, 
-     &  PCNL, PLTPOP, PODNO, PODWT, PSTRES1, PSTRES2, RLV, RSTAGE, 
-     &  RTDEP, RTWT, SATFAC, SDWT, SEEDNO, SENESCE, SHELPC, SLA, 
-     &  STMWTO, SWFAC, TOPWT, TURFAC, VSTAGE, WTCO, WTLF, WTLO, 
+      SUBROUTINE MZ_OPGROW(CONTROL, ISWITCH,
+     &  CANHT, CANWH, DTT, HI, HIP, KSTRES, MDATE, NLAYR, NSTRES,
+     &  PCNL, PLTPOP, PODNO, PODWT, PSTRES1, PSTRES2, RLV, RSTAGE,
+     &  RTDEP, RTWT, SATFAC, SDWT, SEEDNO, SENESCE, SHELPC, SLA,
+     &  STMWTO, SWFAC, TOPWT, TURFAC, VSTAGE, WTCO, WTLF, WTLO,
      &  WTSO, XLAI, YRPLT)
 
 !----------------------------------------------------------------------
-      USE ModuleDefs 
+      USE ModuleDefs
       USE ModuleData
       USE CsvOutput   ! VSH
       IMPLICIT NONE
@@ -49,6 +49,18 @@ C  Calls:     None
       REAL RLV(NL)
       REAL CUMSENSURF, CUMSENSOIL     !cumul. senes. soil and surface
 
+
+C==== STOMA declarations ================================================
+*      REAL          COND, XCOND, XPPT
+*      INTEGER       NOUTST
+*      SAVE          NOUTST
+*      COMMON /MZCOND/ COND, XCOND, XPPT
+*      LOGICAL       STOMA_EXIST
+*      CHARACTER*32  STOMAF
+
+C=======================================================================
+
+
 !     Average stresses since last printout
       REAL SWF_AV, TUR_AV, NST_AV, EXW_AV, PS1_AV, PS2_AV, KST_AV
 
@@ -72,7 +84,7 @@ C  Calls:     None
       RNMODE  = CONTROL % RNMODE
       YRDOY   = CONTROL % YRDOY
       YRSIM   = CONTROL % YRSIM
-      
+
       FMOPT   = ISWITCH % FMOPT   ! VSH
 
 !-----------------------------------------------------------------------
@@ -94,12 +106,12 @@ C  Calls:     None
           IF (FEXIST) THEN
             OPEN (UNIT=NOUTDG, FILE=OUTG, STATUS='OLD',
      &        IOSTAT=ERRNUM, POSITION='APPEND')
-            FIRST = .FALSE.  
+            FIRST = .FALSE.
           ELSE
             OPEN (UNIT=NOUTDG, FILE=OUTG, STATUS='NEW',
      &        IOSTAT = ERRNUM)
               WRITE(NOUTDG,'("*GROWTH ASPECTS OUTPUT FILE")')
-            FIRST = .TRUE.  
+            FIRST = .TRUE.
           ENDIF
 
           !---------------------------------------------------------
@@ -118,11 +130,11 @@ C  Calls:     None
 
           WRITE (NOUTDG,201, ADVANCE='NO')
   201     FORMAT('@YEAR DOY   DAS   DAP',
-     &   '   L#SD   GSTD   LAID   LWAD   SWAD   GWAD',
+     &   '   L#SD   GSTD   LAID   LWAP   SWAD   GWAD',
      &   '   RWAD   VWAD   CWAD   G#AD   GWGD   HIAD   PWAD',
      &   '   P#AD   WSPD   WSGD   NSTD   EWSD  PST1A  PST2A',
      &   '   KSTD   LN%D   SH%D   HIPD   PWDD   PWTD',
-     &   '     SLAD   CHTD   CWID   RDPD') 
+     &   '   SLAD   CHTD   CWID   RDPD')
 
           DO L = 1, N_LYR
             IF (L < 10) THEN
@@ -133,9 +145,45 @@ C  Calls:     None
           ENDDO
 
           WRITE (NOUTDG,207)
-  207     FORMAT('   CDAD   LDAD   SDAD   SNW0C   SNW1C  DTTD') 
+  207     FORMAT('   CDAD   LDAD   SDAD   SNW0C   SNW1C  DTTD')
         END IF ! VSH
-          
+
+CC==== STOMA: open new output and write headers (once/season) ============
+C      CALL GETLUN('STOM', NOUTST)
+C      OPEN(UNIT=NOUTST, FILE='STOMA.OUT', STATUS='UNKNOWN')
+C      WRITE(NOUTST,'(A)') '@YEAR DOY   DAS   DAP     COND'
+C      WRITE(NOUTST,'(A)') '  (yr) (d)  (d)  (d)        (-)'
+C=======================================================================
+
+C==== STOMA: open output (append across seasons, or per-year if FMOPT says) ==
+*      STOMAF = 'STOMA.OUT'
+*      CALL GETLUN('STOM', NOUTST)
+*
+*      IF (FMOPT == 'A' .OR. FMOPT == ' ') THEN
+*C       Append to a single STOMA.OUT across seasons
+*        INQUIRE (FILE=STOMAF, EXIST=STOMA_EXIST)
+*        IF (STOMA_EXIST) THEN
+*          OPEN (UNIT=NOUTST, FILE=STOMAF, STATUS='OLD',
+*     &          IOSTAT=ERRNUM, POSITION='APPEND')
+*        ELSE
+*          OPEN (UNIT=NOUTST, FILE=STOMAF, STATUS='NEW',
+*     &          IOSTAT=ERRNUM)
+*          WRITE(NOUTST,'(A)')
+*     &      '@YEAR DOY   DAS   DAP      COND       XCOND       XPPT'
+*        ENDIF
+*
+*      ELSE
+*C       Alternative: one file per season (e.g., if FMOPT requests fresh files)
+*        WRITE(STOMAF,'("STOMA_",I4.4,".OUT")') YEAR
+*        OPEN (UNIT=NOUTST, FILE=STOMAF, STATUS='REPLACE',
+*     &        IOSTAT=ERRNUM)
+*        WRITE(NOUTST,'(A)')
+*     &    '@YEAR DOY   DAS   DAP      COND       XCOND       XPPT'
+*      ENDIF
+C==============================================================================
+
+
+
         CUMSENSURF = 0.0
         CUMSENSOIL = 0.0
         SWF_AV = 0.0
@@ -159,7 +207,7 @@ C  Calls:     None
           IF (DAP > DAS) DAP = 0
 
 !         Calculate cumulative senesence
-          CUMSENSURF = CUMSENSURF + SENESCE % ResWt(0) 
+          CUMSENSURF = CUMSENSURF + SENESCE % ResWt(0)
           DO L = 1, NLAYR
             CUMSENSOIL = CUMSENSOIL + SENESCE % ResWt(L)
           ENDDO
@@ -181,11 +229,11 @@ C  Calls:     None
           COUNT = COUNT + 1
 
           !-------------------------------------------------------------
-          !  Write output based on user specified frequency 
+          !  Write output based on user specified frequency
           !-------------------------------------------------------------
           IF ((MOD(DAS,FROP) .EQ. 0)    !Daily output every FROP days,
      &      .OR. (YRDOY .EQ. YRPLT)         !on planting date, and
-     &      .OR. (YRDOY .EQ. MDATE)) THEN   !at harvest maturity 
+     &      .OR. (YRDOY .EQ. MDATE)) THEN   !at harvest maturity
 
             CALL YR_DOY(YRDOY, YEAR, DOY)
 
@@ -202,7 +250,7 @@ C  Calls:     None
             ENDIF
 
             VWAD = NINT(WTLF*10. + STMWTO*10.)
-      
+
             IF (FMOPT == 'A' .OR. FMOPT == ' ') THEN   ! VSH
             WRITE(NOUTDG,400,ADVANCE='NO')
      &        YEAR, DOY, DAS, DAP,VSTAGE,RSTAGE,XLAI,
@@ -223,22 +271,38 @@ C  Calls:     None
      &        NINT(WTCO*10.),NINT(WTLO*10.),NINT(WTSO*10.),
      &         NINT(CUMSENSURF), NINT(CUMSENSOIL), DTT
  404          FORMAT (3(1X,I6), 2I8, F6.2)
- 
-            END IF   ! VSH
-            
+
+C==== STOMA: daily record (same cadence as PlantGro) ====================
+C     Mirror LAI: set COND equal to XLAI (daily leaf area index)
+C     COND = XLAI
+C      IF (COND_CNT .GT. 0) THEN
+C         XCOND = COND_SUM / COND_CNT
+C      ELSE
+C         XCOND = -99.0   ! or some missing value flag
+C      ENDIF
+C
+C ! then WRITE XCOND to the output table
+C     WRITE(NOUTST,710) YEAR, DOY, DAS, DAP, XCOND
+C 710 FORMAT(1X,I4,1X,I3.3,2(1X,I5),1X,F6.1,1X,F8.3)   !
+*            WRITE(NOUTST,710) YEAR, DOY, DAS, DAP, COND, XCOND, XPPT
+* 710          FORMAT(1X,I4,1X,I3.3,2(1X,I5),2(1X,F10.4),2(1X,F10.4))
+C=======================================================================
+            ENDIF   ! VSH
+
  !    VSH CSV output corresponding to PlantGro.OUT
-      IF (FMOPT == 'C') THEN    
-         CALL CsvOut_MZCER(EXPNAME,CONTROL%RUN,CONTROL%TRTNUM, 
-     &CONTROL%ROTNUM,CONTROL%REPNO, YEAR, DOY, DAS, DAP, 
-     &VSTAGE, RSTAGE, XLAI, WTLF, STMWTO, SDWT, RTWT, PLTPOP, VWAD, 
-     &TOPWT, SEEDNO, SDSIZE, HI, PODWT, PODNO, SWF_AV, TUR_AV, NST_AV, 
+      IF (FMOPT == 'C') THEN
+         CALL CsvOut_MZCER(EXPNAME,CONTROL%RUN,CONTROL%TRTNUM,
+     &CONTROL%ROTNUM,CONTROL%REPNO, YEAR, DOY, DAS, DAP,
+     &VSTAGE, RSTAGE, XLAI, WTLF, STMWTO, SDWT, RTWT, PLTPOP, VWAD,
+     &TOPWT, SEEDNO, SDSIZE, HI, PODWT, PODNO, SWF_AV, TUR_AV, NST_AV,
      &EXW_AV, PS1_AV, PS2_AV, KST_AV, PCNL, SHELPC, HIP, PODWTD, SLA,
-     &CANHT, CANWH, RTDEP, N_LYR, RLV, WTCO, WTLO, WTSO, CUMSENSURF, 
+     &CANHT, CANWH, RTDEP, N_LYR, RLV, WTCO, WTLO, WTSO, CUMSENSURF,
      &CUMSENSOIL, DTT, vCsvlineMZCER, vpCsvlineMZCER, vlngthMZCER)
-    
+
          CALL LinklstMZCER(vCsvlineMZCER)
-      END IF
-  
+      ENDIF
+
+
           ENDIF
 
 !         Set average stress factors since last printout back to zero
@@ -250,17 +314,18 @@ C  Calls:     None
           PS2_AV = 0.0
           KST_AV = 0.0
 
-        ENDIF 
+        ENDIF
 
 !-----------------------------------------------------------------------
 !                 DYNAMIC = SEASEND
 !-----------------------------------------------------------------------
 C     Simulation Summary File
 C-------------------------------------------------------------------
-      ELSEIF ((DYNAMIC .EQ. SEASEND) 
+      ELSEIF ((DYNAMIC .EQ. SEASEND)
      & .AND. (FMOPT == 'A' .OR. FMOPT == ' ')) THEN
         !Close daily output files.
         CLOSE (NOUTDG)
+*        CLOSE (NOUTST)
 
       ENDIF
 
@@ -275,43 +340,43 @@ C-------------------------------------------------------------------
 !-----------------------------------------------------------------------
 ! CANHT   Canopy height (m)
 ! CANWH   Canopy width normal to row (m)
-! CROP    Crop identification code 
-! ENAME   Experiment description 
-! EXPER   Experiment code (prefix of input files) 
-! HI      Ratio of seed weight (SDWT) to weight of above-ground portion of 
+! CROP    Crop identification code
+! ENAME   Experiment description
+! EXPER   Experiment code (prefix of input files)
+! HI      Ratio of seed weight (SDWT) to weight of above-ground portion of
 !           plant (TOPWT) (g[seed] / g[tops])
-! HIP     Ratio of pod weight (PODWT) to weight of above-ground portion of 
+! HIP     Ratio of pod weight (PODWT) to weight of above-ground portion of
 !           plant (TOPWT) (g[pods] / g[tops])
-! MODEL   Name of CROPGRO executable file 
-! NL      maximum number of soil layers = 20 
-! NOUTDG  Unit number for growth output file 
-! RUN    Report number for sequenced or multi-season runs 
-! NSTRES  Nitrogen stress factor (1=no stress, 0=max stress) 
-! OUTG    Growth output file name (typically 'GROWTH.OUT') 
+! MODEL   Name of CROPGRO executable file
+! NL      maximum number of soil layers = 20
+! NOUTDG  Unit number for growth output file
+! RUN    Report number for sequenced or multi-season runs
+! NSTRES  Nitrogen stress factor (1=no stress, 0=max stress)
+! OUTG    Growth output file name (typically 'GROWTH.OUT')
 ! PCNL    Percentage of N in leaf tissue (100 g[N] / g[leaf])
 ! PODNO   Total number of pods (#/m2)
 ! PODWT   Dry mass of seeds plus shells, including C and N
 !           (g[pods] / m2[ground])
 ! PODWTD  Mass of detached pods (g[pods] / m2[ground])
 ! RLV(L)  Root length density for soil layer L ((cm root / cm3 soil))
-! RSTAGE  Number of RSTAGES which have occurred. 
+! RSTAGE  Number of RSTAGES which have occurred.
 ! RTDEP   Root depth (cm)
 ! RTWT    Dry mass of root tissue, including C and N (g[root] / plant)
-! SATFAC  Root length weighted soil water excess stress factor ( 0 = no 
-!           stress; 1 = saturated stress ) 
+! SATFAC  Root length weighted soil water excess stress factor ( 0 = no
+!           stress; 1 = saturated stress )
 ! SDSIZE  Average mass of seeds (mg / seed)
 ! SEEDNO  Total number of seeds (#/m2)
 ! SHELLW  Shell mass (g[shell] / m2)
 ! SHELPC  Percentage of pod mass that is seeds (g[seed]/g[pods] * 100%)
 ! SLA     Specific leaf area (cm2[leaf] / m2[ground])
 ! STMWTO   Dry mass of stem tissue, including C and N (g[stem] / m2[ground)
-! SWFAC   Effect of soil-water stress on photosynthesis, 1.0=no stress, 
-!           0.0=max stress 
-! TITLET  Description of treatment for this simulation 
+! SWFAC   Effect of soil-water stress on photosynthesis, 1.0=no stress,
+!           0.0=max stress
+! TITLET  Description of treatment for this simulation
 ! TOPWT   Total weight of above-ground portion of crop, including pods
 !           (g[tissue] / m2)
-! TURFAC  Water stress factor for expansion (0 - 1) 
-! VSTAGE  Number of nodes on main stem of plant 
+! TURFAC  Water stress factor for expansion (0 - 1)
+! VSTAGE  Number of nodes on main stem of plant
 ! WTCO    Cumulative losses of plant tissue (g[tissue] / m2)
 ! WTLF    Dry mass of leaf tissue including C and N (g[leaf] / m2[ground])
 ! WTLO    Cumulative leaf losses (g[leaf] / m2)

@@ -63,9 +63,7 @@
 
       USE ModuleDefs
       USE Interface_SenLig_Ceres
-      USE ModuleData
       IMPLICIT  NONE
-
       EXTERNAL GETLUN, FIND, ERROR, IGNORE, MZ_NFACTO, TABEX,
      &  MZ_NUPTAK, MZ_KUPTAK, P_Ceres, YR_DOY, WARNING, CURV,
      &  MZ_VLEAF
@@ -159,7 +157,6 @@
       REAL        KG2PPM(NL)
       INTEGER     L
       REAL        LAI
-      REAL        LAI_eff
       REAL        LAIDOT
       INTEGER     LEAFNO
       REAL        LEAFNOE
@@ -341,12 +338,7 @@
       REAL        YIELDB
       REAL        CARBO_vLeaf
       REAL        EOPVLF
-      REAL        NSTRESS
-      REAL        ratio
       INTEGER     YR, YRDOY
-      REAL TRWU_Y, TRWUP_Y, EP_Y
-      INTEGER IU_TRWU, IOS_TRWU
-      LOGICAL FEX
 
 !     Added to send messages to WARNING.OUT
       CHARACTER*78 MESSAGE(10)
@@ -717,13 +709,8 @@ C          G1_MZ = 3.0
           IPAR   = 0.0
 !         K1     = 0.0
           LAI    = 0.0
-          LAI_eff= 0.0
-          TRWU_Y  = 0.0
-          TRWUP_Y = 0.0
-          EP_Y    = 0.0
           CARBO_vLeaf = 0.0
           EOPVLF = 0.0
-          ratio  = 0.0
           LAIDOT = 0.0
           LEAFNO = 0
           LFWT   = 0.0
@@ -835,7 +822,6 @@ C          G1_MZ = 3.0
           XNTI   = 0.0
           YIELD  = 0.0
           YIELDB = 0.0
-          NSTRESS= 1.0
 
           IF (ISWNIT .NE. 'N') THEN
              CALL MZ_NFACTO(DYNAMIC,TANC,TCNP,TMNC,
@@ -868,8 +854,7 @@ C          G1_MZ = 3.0
      &      PStres1, PStres2, PUptake, FracRts)             !Output
 
           CALL YR_DOY(YRDOY, YR, DOY)
-          CALL MZ_VLEAF(DYNAMIC, LAI, LAI_eff, YR, DOY, SWFAC,
-     &     NSTRESS,CARBO_vLeaf, EOPVLF)  !Output
+          CALL MZ_VLEAF(DYNAMIC, LAI, YR, DOY, CARBO_vLeaf, EOPVLF)  !Output
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
 !
@@ -1075,6 +1060,24 @@ C          G1_MZ = 3.0
               NFAC = 1.0
           ENDIF
 
+          !-------------------------------------------------------------
+          !      Compute Water Stress Factors
+          ! ------------------------------------------------------------
+          SWFAC  = 1.0
+          TURFAC = 1.0
+          IF(ISWWAT.NE.'N') THEN
+             IF (EOP .GT. 0.0) THEN
+                EP1 = EOP * 0.1
+                IF (TRWUP / EP1 .LT. RWUEP1) THEN
+                   TURFAC = (1./RWUEP1) * TRWUP / EP1
+                ENDIF
+                IF (EP1 .GE. TRWUP) THEN
+                  SWFAC = TRWUP / EP1
+                ENDIF
+             ENDIF
+          ENDIF
+          TURFAC = REAL(INT(TURFAC*1000))/1000
+
 
           !-------------------------------------------------------------
           !      Compute Water Saturation Factors
@@ -1128,7 +1131,6 @@ C          G1_MZ = 3.0
           PAR = SRAD*PARSR    !PAR local variable
 
           LIFAC  = 1.5 - 0.768 * ((ROWSPC * 0.01)**2 * PLTPOP)**0.1
-          LAI_eff = LAI
           PCO2  = TABEX (CO2Y,CO2X,CO2,10)
 
 ! JIL 08/01/2006 Intercepted PAR (MJ/plant d)
@@ -1144,68 +1146,9 @@ C          COND_SUM = COND_SUM + COND
 C          COND_CNT = COND_CNT + 1
           CALL YR_DOY(YRDOY, YR, DOY)
 
-          !---------------------------------------------------------------
-          !             Compute the potential evaporationa and carbon gain
-          !---------------------------------------------------------------
-          SWFAC  = 1.0
-          NSTRESS = AMIN1(NSTRES, PStres1, KSTRES)
-          CALL MZ_VLEAF(DYNAMIC, LAI, LAI_eff, YR, DOY, SWFAC,
-     &              NSTRESS, CARBO_vLeaf, EOPVLF)  !Output
 
-          EOP = EOPVLF
-          IF (PLTPOP .GT. 1.0E-6) THEN
-              PCARB = CARBO_vLeaf / PLTPOP
-          ELSE
-              PCARB = 0.0
-          ENDIF
 
-          !-------------------------------------------------------------
-          !      Compute Water Stress Factors
-          ! ------------------------------------------------------------
-          TURFAC = 1.0
-          IF(ISWWAT.NE.'N') THEN
-             IF (EOP .GT. 0.0) THEN
-                EP1 = EOP * 0.1
-                IF (TRWUP / EP1 .LT. RWUEP1) THEN
-                   TURFAC = (1./RWUEP1) * TRWUP / EP1
-                ENDIF
-                IF (EP1 .GE. TRWUP) THEN
-                  SWFAC = TRWUP / EP1
-                ENDIF
-             ENDIF
-          ENDIF
-          TURFAC = REAL(INT(TURFAC*1000))/1000
-
-          INQUIRE(FILE='TRWU_LASTDAY.TXT', EXIST=FEX)
-          IF (FEX) THEN
-            IU_TRWU = 987
-            OPEN(UNIT=IU_TRWU, FILE='TRWU_LASTDAY.TXT', STATUS='OLD',
-     &         ACTION='READ', IOSTAT=IOS_TRWU)
-            IF (IOS_TRWU .EQ. 0) THEN
-              READ(IU_TRWU,*,IOSTAT=IOS_TRWU) TRWU_Y, TRWUP_Y, EP_Y
-              CLOSE(IU_TRWU)
-            ENDIF
-          ENDIF
-
-          IF (EOPVLF .GT. 1.0E-8) THEN
-             SWFAC = TRWU_Y / (0.1* EOPVLF)
-             IF (SWFAC .GT. 1.0) THEN
-                SWFAC = 1.0
-             ENDIF
-          ELSE
-             SWFAC = 1.0
-          ENDIF
-
-!          WRITE(*,'(A,1X,F8.4,1X,F8.4,1X,F8.4,1X,F8.4,1X,F8.4)')
-!     &     'TRWU EOPVLF SWFAC :', TRWU_Y, 0.1*EOPVLF,
-!     &     TRWUP_Y, TRWUP, SWFAC
-
-          !---------------------------------------------------------------
-          !    Update the carbon gain and transpiration based on stress
-          !---------------------------------------------------------------
-          CALL MZ_VLEAF(DYNAMIC, LAI, LAI_eff, YR, DOY, SWFAC,
-     &              NSTRESS,CARBO_vLeaf, EOPVLF)  !Output
-
+          CALL MZ_VLEAF(DYNAMIC, LAI, YR, DOY, CARBO_vLeaf, EOPVLF)  !Output
 
 !-SPE     PRFT= AMIN1(1.25 - 0.0035*((0.25*TMIN+0.75*TMAX)-25.0)**2,1.0)
           TAVGD = 0.25*TMIN+0.75*TMAX
@@ -1242,9 +1185,13 @@ C          COND_CNT = COND_CNT + 1
 
 !     CHP 9/5/04 Added P stress
 !          CARBO = PCARB*AMIN1 (PRFT,SWFAC,NSTRES, PStres1,KSTRES)*SLPF
-
+          IF (PLTPOP .GT. 1.0E-6) THEN
+              PCARB = CARBO_vLeaf / PLTPOP
+          ELSE
+              PCARB = 0.0
+          ENDIF
           !Reduce CARBO for assimilate pest damage
-          CARBO = CARBO_vLeaf / PLTPOP*SLPF
+          CARBO = PCARB*AMIN1 (NSTRES, PStres1,KSTRES)*SLPF
           CARBO = CARBO - ASMDOT
           CARBO = MAX(CARBO,0.0)
 
@@ -2123,8 +2070,7 @@ C          COND_CNT = COND_CNT + 1
      &      PConc_Shut, PConc_Root, PConc_Shel, PConc_Seed, !Output
      &      PStres1, PStres2, PUptake, FracRts)             !Output
           CALL YR_DOY(YRDOY, YR, DOY)
-          CALL MZ_VLEAF(DYNAMIC, LAI, LAI_eff, YR, DOY, SWFAC,
-     &     NSTRESS, CARBO_vLeaf, EOPVLF)  !Output
+          CALL MZ_VLEAF(DYNAMIC, LAI, YR, DOY, CARBO_vLeaf, EOPVLF)  !Output
 !----------------------------------------------------------------------
 !----------------------------------------------------------------------
 !

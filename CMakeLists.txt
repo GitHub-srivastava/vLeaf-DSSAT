@@ -4,7 +4,7 @@
 # Define the project and the dependencies that it has
 ##########################################################################################
 
-CMAKE_MINIMUM_REQUIRED(VERSION 3.10.0)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.5.0)
 
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
    message(FATAL_ERROR "DSSAT in-source builds are not permitted. \nMake a separate folder"
@@ -22,7 +22,7 @@ PROJECT(DSSAT-CSM Fortran)
 SET(MAJOR 4)
 SET(MINOR 8)
 SET(MODEL 5)
-SET(BUILD 49)
+SET(BUILD 0)
 
 # Get the current working branch
 execute_process(
@@ -262,6 +262,7 @@ set(
         "Plant/CERES-IXIM-Maize/MZ_IX_RADABS.for"
         "Plant/CERES-IXIM-Maize/MZ_IX_RESPIR.for"
         "Plant/CERES-Maize/MZ_CERES.for"
+        "Plant/CERES-Maize/VLEAF_UTILS.for"
         "Plant/CERES-Maize/MZ_GROSUB.for"
         "Plant/CERES-Maize/MZ_KUPTAK.for"
         "Plant/CERES-Maize/MZ_NFACTO.for"
@@ -271,6 +272,17 @@ set(
         "Plant/CERES-Maize/MZ_OPNIT.for"
         "Plant/CERES-Maize/MZ_PHENOL.for"
         "Plant/CERES-Maize/MZ_ROOTS.for"
+        "Plant/CERES-Maize/VLEAF_PARAMS.f90"
+  	"Plant/CERES-Maize/stomata.f90"
+  	"Plant/CERES-Maize/boundary.f90"
+  	"Plant/CERES-Maize/c4_photosynth.f90"
+  	"Plant/CERES-Maize/enbal_mod.f90"
+  	"Plant/CERES-Maize/fDiff_mod.f90"
+  	"Plant/CERES-Maize/canopy_Photo.f90"
+  	"Plant/CERES-Maize/can_Weather.f90"
+	"Plant/CERES-Maize/leaf_step_mod.f90"
+        "Plant/CERES-Maize/MZ_VLEAF.for"
+	"Plant/CERES-Maize/daily_carbon_mod.f90"
         "Plant/CERES-Millet/ML_CERES.for"
         "Plant/CERES-Millet/ML_GROSUB.for"
         "Plant/CERES-Millet/ML_NFACT.for"
@@ -375,7 +387,7 @@ set(
         "Plant/CROPSIM/CRP_Output.for"
         "Plant/CROPSIM/CRP_RunInit.for"
         "Plant/CROPSIM/CRP_SeasInit.for"
-        "Plant/CROPSIM/CRP_VarInit.for"
+        "Plant/CROPSIM/CRP_SeasInit_VarInit.for"
         "Plant/CSYCA-Cassava/CSYCA.f90"
         "Plant/CSYCA-Cassava/CSYCA_Interface.for"
         "Plant/CSYCA-Cassava/YCA_Albedo_Check_m.f90"
@@ -428,7 +440,7 @@ set(
         "Plant/CSYCA-Cassava/YCA_SeasInit_ReadGeno.f90"
         "Plant/CSYCA-Cassava/YCA_SeasInit_ReadXfile.f90"
         "Plant/CSYCA-Cassava/YCA_SeasInit_SetStage.f90"
-        "Plant/CSYCA-Cassava/YCA_VarInit.f90"
+        "Plant/CSYCA-Cassava/YCA_SeasInit_VarInit.f90"
         "Plant/FORAGE/forage.for"
         "Plant/FORAGE/for_asmdm.for"
         "Plant/FORAGE/for_canopy.for"
