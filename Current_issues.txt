@@ -1,0 +1,53 @@
+I read through all 21 changed/added files and the diffs against develop, and actually tried a CMake configure to verify the most serious finding. Here's the report.
+
+vLeaf → CERES-Maize integration review
+🔴 1. The build is currently broken (verified)
+CMakeLists.txt was edited to reference Plant/CROPSIM/CRP_SeasInit_VarInit.for and Plant/CSYCA-Cassava/YCA_SeasInit_VarInit.f90 — files that don't exist in this repo (the real files are still named CRP_VarInit.for / YCA_VarInit.f90). I ran cmake -G "MinGW Makefiles" against the tree and it fails immediately:
+
+
+CMake Error at CMakeLists.txt:670 (ADD_EXECUTABLE):
+  Cannot find source file: Plant/CROPSIM/CRP_SeasInit_VarInit.for
+Same CMakeLists.txt also silently reverted CMAKE_MINIMUM_REQUIRED (3.10.0→3.5.0) and BUILD (49→0). Combined with MZ_CERES.for's copyright line flipping 2026→2021 and MZ_OPHARV.for dropping USE SumModule (added in commit f25b045, three commits before yours), it looks like CMakeLists.txt/these files were copied in from an older snapshot of the codebase rather than edited in place. Fix: revert those three unrelated lines/files to match current develop, keeping only your new source-file additions.
+
+🔴 2. Water-stress factor depends on a file nothing ever writes
+In MZ_GROSUB.for (~line 1179), the final SWFAC used for the season is overwritten right after a correct calculation:
+
+
+SWFAC = TRWUP / EP1          ! computed correctly from in-memory TRWUP, a few lines up
+...
+INQUIRE(FILE='TRWU_LASTDAY.TXT', EXIST=FEX)   ! this file is never written anywhere in the repo
+IF (FEX) THEN
+   READ(...) TRWU_Y, TRWUP_Y, EP_Y
+ENDIF
+IF (EOPVLF .GT. 1.0E-8) THEN
+   SWFAC = TRWU_Y / (0.1*EOPVLF)   ! TRWU_Y stays 0.0 forever → SWFAC = 0.0 every day
+Since TRWU_LASTDAY.TXT is never produced (I grepped the whole repo), FEX is always false, TRWU_Y stays at its RUNINIT value of 0.0, and SWFAC collapses to 0.0 on essentially every day for every run — i.e. permanent, maximal water stress regardless of actual soil moisture. This throws away the correctly-computed SWFAC immediately above it and will crater yields in any run. This looks like a leftover debugging/experimental hook. Fix: delete this file-based override block and keep the TRWUP-based SWFAC that's already computed in memory.
+
+🟠 3. The mechanistic canopy loop runs twice per simulated day
+Also in MZ_GROSUB.for, MZ_VLEAF is called twice inside the same DYNAMIC.EQ.INTEGR block: once with SWFAC=1.0 (to get potential EOPVLF), then again with the corrected SWFAC. Each call re-opens and re-parses Daily_Points.txt and MY_CLIMATE_INPUT.txt from disk and re-runs the full sunlit/shaded hourly loop (up to 288 timesteps × up to 100 Newton-iterations each) in leaf_step. The first pass's CARBO_vLeaf/hourly outputs are entirely discarded once the second pass overwrites the same SAVE'd arrays. This two-pass water-stress pattern is scientifically reasonable, but doing the entire expensive submodel twice — with file I/O both times — will be dramatically slower than the RUE-based PCARB line it replaced. Given "keep it simple" is a goal, consider: cache the parsed weather for the day and only re-run the iterative leaf loop, or restructure so only the parts that actually depend on SWFAC re-run.
+
+🟠 4. External flat-file weather inputs bypass DSSAT's own weather system
+MZ_VLEAF reads Daily_Points.txt and MY_CLIMATE_INPUT.txt (fixed relative paths, hardcoded unit numbers 76/77/97/99/987) instead of using DSSAT's WEATHER data already available to every crop module. This means:
+
+vLeaf can't function in a normal DSSAT run without these side-band files being hand-prepared to match the simulation's actual dates/location.
+Batch/multi-treatment runs sharing a working directory would read/overwrite the same file for every treatment.
+It's a second, disconnected source of truth for weather alongside the one DSSAT already manages.
+If vLeaf is meant to become a real replacement for the RUE-based photosynthesis (not just an offline research prototype), it needs to pull hourly forcing from DSSAT's own hourly weather structures rather than a side file.
+
+🟡 5. Dead/orphaned files left in the tree
+MZ_VLEAF_new.for, MZ_VLEAF_old.for, MZ_GROSUB_Old.for, and VLEAF_DRIVER.f90 are all committed but not referenced in CMakeLists.txt — they never compile. VLEAF_DRIVER.f90 is also internally broken (its call call c4_photosynthesis(tLeaf, ci, PAR, Anet) passes 4 arguments to a 5-argument subroutine c4_photosynthesis(tLeaf, vcmax25, ci_leaf, par_leaf, Anet) — this module would fail to compile if it were ever added back). Since the real, working call path is MZ_VLEAF → leaf_step_mod → c4_photosynth (which is correct), these four files are just clutter that will confuse the next person who edits this code. Delete them — that's the single highest-value simplification available here.
+
+🟡 6. Stale commented-out scaffolding
+MZ_OPGROW.for has ~50 lines of commented-out STOMA.OUT output code (COMMON blocks, GETLUN calls, format strings) that never got finished or removed. Either finish it or delete it — half-commented feature code makes the diff much harder to review than it needs to be.
+
+🟢 7. Smaller things worth a pass
+stomata.f90: the doc comment describes the Medlyn model (g0 + 1.6*(1+g1/sqrt(D))*A/Ca) but the code implements a different, simpler humidity-ratio formula (g0 + g1*A/Ca*hs). D_pa/D_kPa are computed and never used. Either the comment or the code is wrong — align them.
+Numeric types are inconsistent across the new .f90 files: most declare real (32-bit) but initialize with d0 (double-precision) literals throughout (c4_photosynth.f90, boundary.f90, canopy_Photo.f90, can_Weather.f90, fDiff_mod.f90, leaf_step_mod.f90). This isn't wrong, but it's the kind of thing that reintroduces the compiler warnings the project explicitly worked to eliminate in past commits (see 754746e "Removed warnings and remarks from the entire source code"). Pick one precision and use matching literal suffixes.
+daily_carbon_mod.f90/call_stomata: several read-but-unused locals (TRWUP_Y, EP_Y in MZ_GROSUB.for; D_pa/D_kPa in stomata.f90).
+Dropping the empirical PRFT (temperature-response) curve from the CARBO calculation (it's now only in a comment) is a legitimate design choice since c4_photosynth.f90 has its own temperature response — but it means cultivar PRFTC calibration coefficients in the species file are now silently unused for this pathway. Worth a one-line note in the code so it isn't mistaken for an oversight.
+Suggested order of fixes
+Revert the accidental CMakeLists.txt/MZ_CERES.for/MZ_OPHARV.for regressions so the project builds again — this blocks everything else.
+Remove the TRWU_LASTDAY.TXT override in MZ_GROSUB.for — this is the correctness-critical one.
+Delete MZ_VLEAF_new.for, MZ_VLEAF_old.for, MZ_GROSUB_Old.for, VLEAF_DRIVER.f90 and the commented STOMA scaffolding in MZ_OPGROW.for.
+Decide on the double-pass performance cost and the external weather-file dependency — both are fine for a research prototype but need a plan before this is relied on for real simulations.
+Want me to go ahead and apply fixes 1–3 (they're mechanical and low-risk), or would you rather review/apply them yourself?

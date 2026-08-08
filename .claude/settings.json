@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git show *)",
+      "Bash(xargs grep -l \"MODULE ModuleData\")",
+      "Bash(git rm *)"
+    ]
+  }
+}

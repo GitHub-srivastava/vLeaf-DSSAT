@@ -1,7 +1,7 @@
       MODULE VLEAF_UTILS
       IMPLICIT NONE
       PRIVATE
-      PUBLIC :: MZ_RPARAMS, MZ_READ_NPOINTS, MZ_READ_DIURNAL_WEATHER
+      PUBLIC :: MZ_RPARAMS, MZ_VLEAF_HOURLY
       CONTAINS
 
 C=======================================================================
@@ -58,7 +58,7 @@ C=======================================================================
       CASE ("x"); x = val
       CASE ("rd25"); rd25 = val
       CASE ("sco25"); sco25 = val
-      CASE ("switch"); switch = val
+      CASE ("switch"); switch = NINT(val)
       END SELECT
       GOTO 10
 
@@ -66,145 +66,87 @@ C=======================================================================
       CLOSE(99)
       END SUBROUTINE MZ_RPARAMS
 
-C=====================================================================
-C  MZ_READ_NPOINTS (F77 fixed-form, fixed file path)
-C  Reads a single integer from "Daily_Points.txt"
-C=====================================================================
-      SUBROUTINE MZ_READ_NPOINTS(NPTS, IERR)
+C=======================================================================
+C  MZ_VLEAF_HOURLY
+C  Builds vLeaf's hourly forcing arrays (K=1..TS) directly from DSSAT's
+C  own WeatherType, instead of reading external text files. WEATHER is
+C  filled once per simulation day by WEATHR/HMET (Weather/HMET.for)
+C  before any Plant module runs, so TAIRHR/RADHR/WINDHR/RHUMHR/BETA/
+C  FRDIFP/FRDIFR are already the real, site- and date-correct values
+C  for today - vLeaf only needs to unpack and convert units.
+C
+C  CO2 (ppm) and ATMPRES (Pa) are treated as constant across the day:
+C  CO2 is DSSAT's daily atmospheric CO2 (already available to the
+C  caller); ATMPRES is estimated once per season from station elevation
+C  (WEATHER%XELEV) since DSSAT does not track hourly air pressure.
+C
+C  Downwelling longwave (LW) has no DSSAT equivalent either, so it is
+C  estimated hourly from air temperature and vapor pressure using a
+C  standard clear-sky formulation (Brutsaert, 1975).
+C
+C  This subroutine is the ONLY place vLeaf reads WEATHER; everything
+C  downstream works from the plain arrays returned here.
+C=======================================================================
+      SUBROUTINE MZ_VLEAF_HOURLY(WEATHER, CO2, ATMPRES,      !Input
+     &  HOUR, TAIR, EA, LW, WIND, PRES, CA, ZENITH,          !Output
+     &  PAR_DIR, PAR_DIF, NIR_DIR, NIR_DIF)                  !Output
+
+      USE ModuleDefs
       IMPLICIT NONE
-      INTEGER NPTS, IERR
+      TYPE (WeatherType), INTENT(IN) :: WEATHER
+      REAL, INTENT(IN)  :: CO2, ATMPRES
+      REAL, INTENT(OUT) :: HOUR(TS), TAIR(TS), EA(TS), LW(TS)
+      REAL, INTENT(OUT) :: WIND(TS), PRES(TS), CA(TS), ZENITH(TS)
+      REAL, INTENT(OUT) :: PAR_DIR(TS), PAR_DIF(TS)
+      REAL, INTENT(OUT) :: NIR_DIR(TS), NIR_DIF(TS)
 
-      INTEGER UNP, IOS
-      CHARACTER*30 FILEPATH
-      PARAMETER (UNP = 76)
+      INTEGER H
+      REAL TAK, EA_KPA, EPSA, RG, PAR, NIR
+      REAL VPSAT
+      EXTERNAL VPSAT
+      REAL, PARAMETER :: SIGMASB = 5.6703744E-08
 
-      NPTS = 0
-      IERR = 0
-      FILEPATH = 'Daily_Points.txt'
+C     Shortwave partitioned into PAR/NIR by the conventional 45/55
+C     energy split. NOTE: WEATHER%PARHR is deliberately NOT used here -
+C     it carries umol m-2 s-1, whereas vLeaf's leaf physics
+C     (c4_photosynth.f90 applies its own 4.6 umol/J conversion)
+C     expects PAR as an energy flux in W m-2.
+      REAL, PARAMETER :: FPAR = 0.45, FNIR = 0.55
 
-      OPEN(UNIT=UNP, FILE=FILEPATH, STATUS='OLD', IOSTAT=IOS)
-      IF (IOS .NE. 0) THEN
-         IERR = 1
-         RETURN
-      ENDIF
+      DO H = 1, TS
+        HOUR(H)   = REAL(H)
+        TAIR(H)   = WEATHER % TAIRHR(H)
+        WIND(H)   = MAX(WEATHER % WINDHR(H), 0.1)
+        PRES(H)   = ATMPRES
+        CA(H)     = CO2
+        ZENITH(H) = 90.0 - WEATHER % BETA(H)
 
-      READ(UNP,*,IOSTAT=IOS) NPTS
-      IF (IOS .NE. 0) THEN
-         IERR = 2
-         CLOSE(UNP)
-         RETURN
-      ENDIF
+C       Vapor pressure of air [Pa] from RH and saturation vapor
+C       pressure (VPSAT, Weather/HMET.for - already used by WEATHR).
+        EA(H) = (WEATHER % RHUMHR(H) / 100.0) * VPSAT(TAIR(H))
 
-      CLOSE(UNP)
-      RETURN
-      END SUBROUTINE MZ_READ_NPOINTS
+C       Direct/diffuse split from DSSAT's own hourly diffuse fractions
+C       (FRDIFP for PAR photons, FRDIFR for total shortwave), computed
+C       by FRACD inside HMET. At night FRACD returns 1.0 for both and
+C       RADHR is 0, so all four components correctly go to zero.
+        RG  = MAX(WEATHER % RADHR(H), 0.0)
+        PAR = FPAR * RG
+        NIR = FNIR * RG
 
-C=====================================================================
-C  MZ_READ_DIURNAL_WEATHER  (F77 fixed-form; adjustable arrays)
-C
-C  - Caller passes NPTS (read earlier via MZ_READ_NPOINTS in MZ_VLEAF)
-C  - Opens fixed climate file 'MY_CLIMATE_INPUT.txt'
-C  - Reads space-delimited climate TXT (with one header line)
-C  - Filters rows by YR and DOY; fills arrays up to NPTS
-C
-C  IERR:
-C    0 = success
-C    1 = cannot open climate file or header read error
-C    3 = more rows for the day than NPTS (truncated)
-C
-C  Expected columns:
-C    YR DOY HOUR ZEN LAT LON RG LNG PPT TAIR CA O2 EA WIND PRES
-C=====================================================================
-      SUBROUTINE MZ_READ_DIURNAL_WEATHER(YR, DOY,
-     &  NPTS, NREC,
-     &  HOUR_OUT, TAIR_OUT, EA_OUT,
-     &  RG_OUT, LNG_OUT, PPT_OUT, WIND_OUT,
-     &  PRESS_OUT, CA_OUT, O2_OUT,
-     &  LAT_OUT,
-     &  IERR)
+        PAR_DIR(H) = PAR * (1.0 - WEATHER % FRDIFP(H))
+        PAR_DIF(H) = PAR - PAR_DIR(H)
+        NIR_DIR(H) = NIR * (1.0 - WEATHER % FRDIFR(H))
+        NIR_DIF(H) = NIR - NIR_DIR(H)
 
-C---- Dummy args (NPTS must appear before arrays using it) ----------
-      IMPLICIT NONE
-      INTEGER       YR, DOY
-      INTEGER       NPTS
-      INTEGER       NREC
-      REAL          HOUR_OUT (NPTS)
-      REAL          TAIR_OUT (NPTS)
-      REAL          EA_OUT   (NPTS)
-      REAL          RG_OUT   (NPTS)
-      REAL          LNG_OUT  (NPTS)
-      REAL          PPT_OUT  (NPTS)
-      REAL          WIND_OUT (NPTS)
-      REAL          PRESS_OUT(NPTS)
-      REAL          CA_OUT   (NPTS)
-      REAL          O2_OUT   (NPTS)
-      REAL          LAT_OUT  (NPTS)
-      INTEGER       IERR
+C       Clear-sky downwelling longwave [W m-2] (Brutsaert, 1975);
+C       DSSAT has no native hourly LW estimate to draw on.
+        TAK    = TAIR(H) + 273.15
+        EA_KPA = MAX(EA(H), 0.0) / 1000.0
+        EPSA   = 1.72 * (EA_KPA / MAX(TAK, 1.0))**(1.0/7.0)
+        EPSA   = MIN(1.0, MAX(0.0, EPSA))
+        LW(H)  = EPSA * SIGMASB * TAK**4
+      ENDDO
 
-C---- Locals ---------------------------------------------------------
-      INTEGER UWD, IOS, YY, JD, HH
-      REAL ZEN, LAT, LON, RG, LNG, PPT, TAIR, CA, O2, EA, WIND, PRES
-      LOGICAL DONE
-      CHARACTER*40 CLIMFILE
-      PARAMETER (UWD = 77)
-
-      NREC = 0
-      IERR = 0
-      DONE = .FALSE.
-      CLIMFILE = 'MY_CLIMATE_INPUT.txt'
-
-C---- Open climate file
-      OPEN(UNIT=UWD, FILE=CLIMFILE, STATUS='OLD', IOSTAT=IOS)
-      IF (IOS .NE. 0) THEN
-         IERR = 1
-         RETURN
-      ENDIF
-
-C---- Skip header line
-      READ(UWD,'(A)',IOSTAT=IOS)
-      IF (IOS .NE. 0) THEN
-         CLOSE(UWD)
-         IERR = 1
-         RETURN
-      ENDIF
-
-C---- Read loop
- 100  CONTINUE
-      IF (DONE) GOTO 200
-
-      READ(UWD,*,IOSTAT=IOS) YY, JD, HH, ZEN, LAT, LON,
-     &    RG, LNG, PPT, TAIR, CA, O2, EA, WIND, PRES
-
-      IF (IOS .NE. 0) THEN
-         DONE = .TRUE.
-         GOTO 100
-      ENDIF
-
-      IF (YY .EQ. YR .AND. JD .EQ. DOY) THEN
-         IF (NREC .LT. NPTS) THEN
-            NREC = NREC + 1
-            HOUR_OUT (NREC) = FLOAT(HH)
-            TAIR_OUT (NREC) = TAIR
-            EA_OUT   (NREC) = EA
-            RG_OUT   (NREC) = RG
-            LNG_OUT  (NREC) = LNG
-            PPT_OUT  (NREC) = PPT
-            WIND_OUT (NREC) = WIND
-            PRESS_OUT(NREC) = PRES
-            CA_OUT   (NREC) = CA
-            O2_OUT   (NREC) = O2
-            LAT_OUT  (NREC) = LAT
-         ELSE
-C           More rows than NPTS -> truncate store, continue scanning
-            IERR = 3
-         ENDIF
-      ENDIF
-
-      GOTO 100
-
- 200  CONTINUE
-      CLOSE(UWD)
-      RETURN
-      END SUBROUTINE MZ_READ_DIURNAL_WEATHER
+      END SUBROUTINE MZ_VLEAF_HOURLY
 
       END MODULE VLEAF_UTILS

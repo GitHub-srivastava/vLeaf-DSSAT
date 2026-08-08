@@ -1,88 +1,92 @@
 C-----------------------------------------------------------------------
-C  MZ_VLEAF: Stomatal conductance helper for CERES-Maize
-C Initializes the variables at the start of season
-C Compute COND using the LAI
-C Daily average for the output
+C  MZ_VLEAF: Leaf/canopy-scale coupled photosynthesis-stomatal
+C  conductance-energy balance submodel ("vLeaf") for CERES-Maize.
+C
+C  Sub-daily driver: runs the sunlit/shaded canopy leaf model once per
+C  hour (TS = 24 hourly steps, ModuleDefs.for) using DSSAT's own hourly
+C  weather (WEATHER%TAIRHR/RADHR/WINDHR/RHUMHR/BETA/FRDIFP/FRDIFR,
+C  filled once per day by WEATHR/HMET before any Plant module runs -
+C  see VLEAF_UTILS.for/MZ_VLEAF_HOURLY) and integrates hourly carbon
+C  gain and transpiration to daily totals (CARBO_vLeaf, EOPVLF).
 C-----------------------------------------------------------------------
 
       SUBROUTINE MZ_VLEAF(DYNAMIC,
-     & LAI, LAI_eff, YR, DOY, SWFAC, NSTRESS, gDM_day, EOPVLF)
+     & LAI, LAI_eff, YR, DOY, SWFAC, NSTRESS, gDM_day, EOPVLF,
+     & WEATHER, CO2)
+      USE ModuleDefs
       USE VLEAF_UTILS
-      USE VLEAF_PARAMS, ONLY: VLEAF_SET_PARAMS
-      USE fDiff_mod, only: call_fDiff
+C     intercept/slope/switch are taken from VLEAF_PARAMS (a saved
+C     module) rather than kept as locals: they are set once at
+C     SEASINIT but read every INTEGR step, and subroutine locals are
+C     not guaranteed to persist between calls without SAVE.
+      USE VLEAF_PARAMS, ONLY: VLEAF_SET_PARAMS,
+     &                        intercept, slope, switch
       USE can_Weather, only: canopy_weather
       USE canopy_Photo, only: sunshade_photo
       USE leaf_step_mod, only: leaf_step
       USE daily_carbon_mod, only: daily_carbon, daily_transpiration
-!     USE VLEAF_DRIVER
-
 
       IMPLICIT NONE
 
       INTEGER DYNAMIC, YR, DOY, K
-      REAL LAI, PAR, NIR, tSoil, SWFAC, LAI_eff
-      REAL NSTRESS
+      REAL LAI, tSoil, SWFAC, LAI_eff
+      REAL NSTRESS, CO2
+      TYPE (WeatherType) WEATHER
 
 ! Declare these somewhere in MZ_VLEAF:
       REAL molCO2_day, gC_day, gDM_day
       REAL molH2O_day, EOPVLF
-!      SAVE molCO2_day, gC_day, gDM_day
 
-C Local variables
-      REAL aPARLeaf, aNIRLeaf
-      REAL Omega, alpha_deg
-      REAL intercept, slope, vpr25, vcmax25, jmax25
-      REAL vpmax25, theta, gbs, alpha, x, rd25, sco25
-      INTEGER switch
+C Canopy radiative constants
+      REAL aPARLeaf, aNIRLeaf, Omega, alpha_deg
+      PARAMETER (aPARLeaf  = 0.80)   ! leaf PAR absorptivity
+      PARAMETER (aNIRLeaf  = 0.23)   ! leaf NIR absorptivity
+      PARAMETER (Omega     = 1.00)   ! canopy clumping index
+      PARAMETER (alpha_deg = 60.00)  ! mean leaf inclination angle, deg
 
-      INTEGER, PARAMETER :: RUNINIT = 1
-      INTEGER, PARAMETER :: SEASINIT = 2
-      INTEGER, PARAMETER :: INTEGR  = 4
-      INTEGER, PARAMETER :: OUTPUT  = 5
-      INTEGER, PARAMETER :: SEASEND = 6
+C     Scratch copies used only to read MY_PARAMS.TXT at SEASINIT and
+C     hand the values to VLEAF_SET_PARAMS; the persistent values live
+C     in VLEAF_PARAMS.
+      REAL p_intercept, p_slope, p_vpr25, p_vcmax25, p_jmax25
+      REAL p_vpmax25, p_theta, p_gbs, p_alpha, p_x, p_rd25, p_sco25
+      INTEGER p_switch
 
-      INTEGER NPTS, IERRN, IERRW, NREC
-      INTEGER MAXPTS
-      PARAMETER (MAXPTS = 288)               ! safe upper bound
+C     RUNINIT, SEASINIT, INTEGR, OUTPUT, SEASEND come from ModuleDefs
 
-!    Forcing variables
-      REAL HOUR(MAXPTS), tAir(MAXPTS), ea(MAXPTS)
-      REAL Rg(MAXPTS), LW(MAXPTS), ppt(MAXPTS), wind(MAXPTS)
-      REAL pressure(MAXPTS), ca(MAXPTS), O2(MAXPTS)
+      INTEGER NREC
+      REAL AtmPRES
+
+!    Forcing variables (TS hourly steps, matches DSSAT's WEATHER)
+      REAL HOUR(TS), tAir(TS), ea(TS)
+      REAL LW(TS), wind(TS)
+      REAL pressure(TS), ca(TS), zenith(TS)
       LOGICAL HROUT_INIT, sunFlag, shFlag
       DATA HROUT_INIT /.FALSE./
 
-
 !    Output initialize
-      REAL zenith, PAR_dir, PAR_dif
-      REAL NIR_dir, NIR_dif
-      REAL ci, eb, cb, errA, errCi, errT
-!      REAL Res
-      REAL LAT(MAXPTS)
+      REAL PAR_dir(TS), PAR_dif(TS)
+      REAL NIR_dir(TS), NIR_dif(TS)
+      REAL ci, eb, cb
 
-      REAL LAIsun(MAXPTS), PAR_leaf_sun(MAXPTS)
-      REAL NIR_leaf_sun(MAXPTS), sun_vcmax25(MAXPTS)
-      REAL sunAnet(MAXPTS), sunGs(MAXPTS), sunGb(MAXPTS)
-      REAL suntLeaf(MAXPTS), sunRn(MAXPTS), sunHf(MAXPTS)
-      REAL sunLWe(MAXPTS), sunTr(MAXPTS)
-      REAL sunLWnet(MAXPTS), sunLEf(MAXPTS)
-      REAL sunRes(MAXPTS), shRes(MAXPTS)
-      REAL sunerrA(MAXPTS), sunerrCi(MAXPTS), sunerrT(MAXPTS)
+      REAL LAIsun(TS), PAR_leaf_sun(TS)
+      REAL NIR_leaf_sun(TS), sun_vcmax25(TS)
+      REAL sunAnet(TS), sunGs(TS), sunGb(TS)
+      REAL suntLeaf(TS), sunRn(TS), sunHf(TS)
+      REAL sunLWe(TS), sunTr(TS)
+      REAL sunLWnet(TS), sunLEf(TS)
+      REAL sunRes(TS), shRes(TS)
+      REAL sunerrA(TS), sunerrCi(TS), sunerrT(TS)
 
-      REAL LAIsh(MAXPTS), PAR_leaf_sh(MAXPTS)
-      REAL NIR_leaf_sh(MAXPTS), sh_vcmax25(MAXPTS)
-      REAL shAnet(MAXPTS), shGs(MAXPTS), shGb(MAXPTS)
-      REAL shtLeaf(MAXPTS), shRn(MAXPTS), shHf(MAXPTS)
-      REAL shLWe(MAXPTS), shTr(MAXPTS)
-      REAL shLWnet(MAXPTS), shLEf(MAXPTS)
-      REAL sherrA(MAXPTS), sherrCi(MAXPTS), sherrT(MAXPTS)
-
-!    Values for the LW checks
-      REAL LWd_used, TaK, ea_kPa, epsA
-      REAL sigmasb
-      PARAMETER (sigmasb = 5.6703744E-08)
+      REAL LAIsh(TS), PAR_leaf_sh(TS)
+      REAL NIR_leaf_sh(TS), sh_vcmax25(TS)
+      REAL shAnet(TS), shGs(TS), shGb(TS)
+      REAL shtLeaf(TS), shRn(TS), shHf(TS)
+      REAL shLWe(TS), shTr(TS)
+      REAL shLWnet(TS), shLEf(TS)
+      REAL sherrA(TS), sherrCi(TS), sherrT(TS)
 
 !    Save Output for output
+      SAVE AtmPRES
       SAVE LAIsun, PAR_leaf_sun, NIR_leaf_sun
       SAVE sun_vcmax25, sunAnet, sunGs, sunGb
       SAVE suntLeaf, sunRn, sunHf, sunLWe
@@ -96,12 +100,13 @@ C Local variables
       SAVE shTr, shLWnet, shLEf
       SAVE sherrA, sherrCi, sherrT
 
-
-      SAVE HROUT_INIT, NREC, HOUR
-      INTEGER ISTAT
+C     LW is written in the OUTPUT phase, so it must persist from INTEGR
+      SAVE HROUT_INIT, NREC, HOUR, LW
 
 
       IF(DYNAMIC.EQ.RUNINIT) THEN
+
+        NREC = 0
 
         IF (.NOT. HROUT_INIT) THEN
         OPEN(UNIT=97, FILE='VLEAF_HOURLY.OUT',
@@ -121,79 +126,46 @@ C Local variables
 
       ELSEIF(DYNAMIC.EQ.SEASINIT) THEN
 
-      CALL MZ_RPARAMS(intercept, slope, vpr25, vcmax25, jmax25,
-     & vpmax25, theta, gbs, alpha, x, rd25, sco25, switch)
+      CALL MZ_RPARAMS(p_intercept, p_slope, p_vpr25, p_vcmax25,
+     & p_jmax25, p_vpmax25, p_theta, p_gbs, p_alpha, p_x, p_rd25,
+     & p_sco25, p_switch)
 
-      CALL VLEAF_SET_PARAMS(intercept, slope, vpr25,
-     &                      vcmax25, jmax25, vpmax25,
-     &                      theta, gbs, alpha,
-     &                      x, rd25, sco25, switch)
+      CALL VLEAF_SET_PARAMS(p_intercept, p_slope, p_vpr25,
+     &                      p_vcmax25, p_jmax25, p_vpmax25,
+     &                      p_theta, p_gbs, p_alpha,
+     &                      p_x, p_rd25, p_sco25, p_switch)
 
+C     Atmospheric pressure from station elevation (standard
+C     barometric approximation); DSSAT has no hourly pressure data
+C     and station elevation does not change during a run.
+      AtmPRES = 101325.0 * (1.0 - 2.25577E-5*WEATHER%XELEV)**5.25588
 
       ELSEIF(DYNAMIC.EQ.INTEGR) THEN
-        NREC = 0
+        NREC = TS
 
-C 1) Read NPTS from Daily_Points.txt
-      CALL MZ_READ_NPOINTS(NPTS, IERRN)
-        IF (IERRN .NE. 0) RETURN
-        IF (NPTS .GT. MAXPTS) RETURN
+C       Build today's hourly forcing directly from DSSAT's WEATHER
+C       (filled by WEATHR/HMET before any Plant module runs).
+        CALL MZ_VLEAF_HOURLY(WEATHER, CO2, AtmPRES,
+     &       HOUR, tAir, ea, LW, wind, pressure, ca, zenith,
+     &       PAR_dir, PAR_dif, NIR_dir, NIR_dif)
 
-      CALL MZ_READ_DIURNAL_WEATHER(YR, DOY,
-     &     NPTS, NREC, HOUR, tAir, ea, Rg,
-     &     LW, ppt, wind, pressure, ca, O2, LAT, IERRW)
-        IF (IERRW .EQ. 1) RETURN
-*        IF (IERRW .EQ. 3) then continue; you just got truncated to NPTS
-
-       aPARLeaf = 0.80d0
-       aNIRLeaf = 0.23d0
-       Omega = 1.00d0
-       alpha_deg = 60.00d0
-       errA  = 1.0d0
-       errCi = 1.0d0
-       errT  = 1.0d0
-       ci = 1.0d0
-       eb = 1.0d0
-       cb = 1.0d0
+C      ci/eb/cb are declared only to receive leaf_step's INTENT(OUT)
+C      state; leaf_step re-seeds them internally every call, so each
+C      hour is solved independently (no warm start between hours).
 
        DO 110 K = 1, NREC
-C<<< NEW: compute hourly PAR (very simple) and hourly Anet >>
 
-
-          PAR = 0.45d0 * MAX(Rg(K),0.0)
-          NIR = 0.55d0 * MAX(Rg(K),0.0)
           tSoil = tAir(K) - 1
-          wind(K) = MAX(wind(K),0.1)
-
-C----- LW sanity check + fallback LWd from Drewry/Brutsaert-type epsA
-C     Expect LWd ~ 200–550 W m-2 typically. Negative means "net LW", not incoming.
-          LWd_used = LW(K)
-
-C         If LW looks like net LW (negative) or otherwise unrealistic, overwrite it.
-          IF (LW(K) .LT. 50.0 .OR. LW(K) .GT. 700.0) THEN
-             TaK    = tAir(K) + 273.15
-             ea_kPa = MAX(ea(K), 0.0) / 1000.0
-
-C            Brutsaert-style clear-sky emissivity (common in canopy/LSM codes)
-             epsA = 1.72 * (ea_kPa / MAX(TaK, 1.0))**(1.0/7.0)
-             epsA = MIN(1.0, MAX(0.0, epsA))
-
-             LW(K) = epsA * sigmasb * TaK**4
-          ENDIF
-
-C            Computation for the direct and diffused fraction
-          call call_fDiff(HOUR(K), DOY, LAT(K), PAR, NIR,
-     &         zenith, PAR_dir, PAR_dif,
-     &         NIR_dir, NIR_dif)
 
 C            Gives the absorbed leaf level radiation
-          CALL canopy_weather(LAI_eff, Omega, alpha_deg, zenith,
-     &               PAR_dir, PAR_dif, NIR_dir, NIR_dif,
+          CALL canopy_weather(LAI_eff, Omega, alpha_deg, zenith(K),
+     &               PAR_dir(K), PAR_dif(K), NIR_dir(K), NIR_dif(K),
      &               aPARLeaf, aNIRLeaf, LAIsun(K), LAIsh(K),
      &               PAR_leaf_sun(K), PAR_leaf_sh(K), NIR_leaf_sun(K),
      &               NIR_leaf_sh(K))
 
 C            Computes the sun-shade canopy average photosynthetic capacity
-          CALL sunshade_photo(zenith, LAI, Omega, NSTRESS,
+          CALL sunshade_photo(zenith(K), LAI, Omega, NSTRESS,
      &                           sun_vcmax25(K), sh_vcmax25(K))
 
 C            Computation of leaf scale fluxes for sunlit and then shaded
@@ -337,4 +309,3 @@ C--- optional but recommended: keep flux bookkeeping consistent
 
       RETURN
       END
-

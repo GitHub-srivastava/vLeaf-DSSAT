@@ -342,11 +342,7 @@
       REAL        CARBO_vLeaf
       REAL        EOPVLF
       REAL        NSTRESS
-      REAL        ratio
       INTEGER     YR, YRDOY
-      REAL TRWU_Y, TRWUP_Y, EP_Y
-      INTEGER IU_TRWU, IOS_TRWU
-      LOGICAL FEX
 
 !     Added to send messages to WARNING.OUT
       CHARACTER*78 MESSAGE(10)
@@ -374,6 +370,7 @@
 
       TYPE (ResidueType) SENESCE
       TYPE (SwitchType)  ISWITCH
+      TYPE (WeatherType) WEATHER
 
 !----------------------------------------------------------------------
 !     CHP 3/31/2006
@@ -383,6 +380,12 @@
 !----------------------------------------------------------------------
 !                     DYNAMIC = RUNINIT
 !----------------------------------------------------------------------
+
+!     Hourly weather for vLeaf (WEATHER%TAIRHR, RADHR, WINDHR, RHUMHR,
+!     BETA, FRDIFP, FRDIFR) is filled once per day by WEATHR/HMET
+!     before any Plant module runs, and is retrieved here rather than
+!     threaded through MZ_GROSUB's argument list.
+      CALL GET(WEATHER)
 
       IF(DYNAMIC.EQ.RUNINIT.OR.DYNAMIC.EQ.SEASINIT) THEN
 
@@ -681,12 +684,6 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
           CARBO  = 0.0
 !          CSD1   = 0.0
 !          CSD2   = 0.0
-!          COND = 0.0
-!          COND_CNT = 0
-!          COND_SUM = 0.0
-C          G0_MZ = 0.008
-C          G1_MZ = 3.0
-!          XCOND = 0.0
           CMAT   = 0
           CUMDTTEG=0.0
           CumLeafSenes = 0.0
@@ -718,12 +715,8 @@ C          G1_MZ = 3.0
 !         K1     = 0.0
           LAI    = 0.0
           LAI_eff= 0.0
-          TRWU_Y  = 0.0
-          TRWUP_Y = 0.0
-          EP_Y    = 0.0
           CARBO_vLeaf = 0.0
           EOPVLF = 0.0
-          ratio  = 0.0
           LAIDOT = 0.0
           LEAFNO = 0
           LFWT   = 0.0
@@ -869,7 +862,7 @@ C          G1_MZ = 3.0
 
           CALL YR_DOY(YRDOY, YR, DOY)
           CALL MZ_VLEAF(DYNAMIC, LAI, LAI_eff, YR, DOY, SWFAC,
-     &     NSTRESS,CARBO_vLeaf, EOPVLF)  !Output
+     &     NSTRESS,CARBO_vLeaf, EOPVLF, WEATHER, CO2)  !Output
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
 !
@@ -1137,11 +1130,9 @@ C          G1_MZ = 3.0
           ELSE
             IPAR = 0.0
           ENDIF
+C         RUE-based PCARB (original CERES-Maize) is replaced below by
+C         vLeaf's mechanistic canopy photosynthesis (CARBO_vLeaf).
 C          PCARB = IPAR * RUE * PCO2
-C----- Calculate COND from IPAR
-C          COND = G0_MZ + G1_MZ * IPAR
-C          COND_SUM = COND_SUM + COND
-C          COND_CNT = COND_CNT + 1
           CALL YR_DOY(YRDOY, YR, DOY)
 
           !---------------------------------------------------------------
@@ -1150,7 +1141,7 @@ C          COND_CNT = COND_CNT + 1
           SWFAC  = 1.0
           NSTRESS = AMIN1(NSTRES, PStres1, KSTRES)
           CALL MZ_VLEAF(DYNAMIC, LAI, LAI_eff, YR, DOY, SWFAC,
-     &              NSTRESS, CARBO_vLeaf, EOPVLF)  !Output
+     &              NSTRESS, CARBO_vLeaf, EOPVLF, WEATHER, CO2) !Output
 
           EOP = EOPVLF
           IF (PLTPOP .GT. 1.0E-6) THEN
@@ -1176,35 +1167,12 @@ C          COND_CNT = COND_CNT + 1
           ENDIF
           TURFAC = REAL(INT(TURFAC*1000))/1000
 
-          INQUIRE(FILE='TRWU_LASTDAY.TXT', EXIST=FEX)
-          IF (FEX) THEN
-            IU_TRWU = 987
-            OPEN(UNIT=IU_TRWU, FILE='TRWU_LASTDAY.TXT', STATUS='OLD',
-     &         ACTION='READ', IOSTAT=IOS_TRWU)
-            IF (IOS_TRWU .EQ. 0) THEN
-              READ(IU_TRWU,*,IOSTAT=IOS_TRWU) TRWU_Y, TRWUP_Y, EP_Y
-              CLOSE(IU_TRWU)
-            ENDIF
-          ENDIF
-
-          IF (EOPVLF .GT. 1.0E-8) THEN
-             SWFAC = TRWU_Y / (0.1* EOPVLF)
-             IF (SWFAC .GT. 1.0) THEN
-                SWFAC = 1.0
-             ENDIF
-          ELSE
-             SWFAC = 1.0
-          ENDIF
-
-!          WRITE(*,'(A,1X,F8.4,1X,F8.4,1X,F8.4,1X,F8.4,1X,F8.4)')
-!     &     'TRWU EOPVLF SWFAC :', TRWU_Y, 0.1*EOPVLF,
-!     &     TRWUP_Y, TRWUP, SWFAC
-
           !---------------------------------------------------------------
-          !    Update the carbon gain and transpiration based on stress
+          !    Update the carbon gain and transpiration based on today's
+          !    water stress (SWFAC, computed above from TRWUP/EOP)
           !---------------------------------------------------------------
           CALL MZ_VLEAF(DYNAMIC, LAI, LAI_eff, YR, DOY, SWFAC,
-     &              NSTRESS,CARBO_vLeaf, EOPVLF)  !Output
+     &              NSTRESS,CARBO_vLeaf, EOPVLF, WEATHER, CO2) !Output
 
 
 !-SPE     PRFT= AMIN1(1.25 - 0.0035*((0.25*TMIN+0.75*TMAX)-25.0)**2,1.0)
@@ -1229,6 +1197,10 @@ C          COND_CNT = COND_CNT + 1
           PRFT = CURV('LIN',PRFTC(1),PRFTC(2),PRFTC(3),PRFTC(4),TAVGD)
           PRFT  = AMAX1 (PRFT,0.0)
           PRFT = MIN(PRFT,1.0)
+C         NOTE: PRFT (and its PRFTC cultivar coefficients) is no longer
+C         applied to CARBO - vLeaf's c4_photosynth.f90 has its own
+C         Vcmax temperature response, so the empirical PRFT curve is
+C         superseded for this pathway, not accidentally dropped.
 
 !**************************************************************************
 !**************************************************************************
@@ -2124,7 +2096,7 @@ C          COND_CNT = COND_CNT + 1
      &      PStres1, PStres2, PUptake, FracRts)             !Output
           CALL YR_DOY(YRDOY, YR, DOY)
           CALL MZ_VLEAF(DYNAMIC, LAI, LAI_eff, YR, DOY, SWFAC,
-     &     NSTRESS, CARBO_vLeaf, EOPVLF)  !Output
+     &     NSTRESS, CARBO_vLeaf, EOPVLF, WEATHER, CO2)  !Output
 !----------------------------------------------------------------------
 !----------------------------------------------------------------------
 !

@@ -7,11 +7,12 @@ module stomata
 contains
 
   !-------------------------------------------------------------------
-  ! Medlyn stomatal conductance model with D computed internally
+  ! Ball-Berry stomatal conductance model (Ball, Woodrow & Berry, 1987)
   !
-  !   gs* = g0 + 1.6 * ( 1 + g1 / sqrt(D) ) * A / Ca
+  !   gs = g0 + g1 * A * hs / Ca
   !
-  ! where D is VPD in kPa, computed from leaf temperature and ea.
+  ! where hs is relative humidity at the leaf surface (ea/ei), derived
+  ! from leaf temperature and ambient vapour pressure.
   !
   ! Inputs
   !   Anet   : net assimilation A           [umol m-2 s-1]
@@ -19,7 +20,7 @@ contains
   !   tleaf  : leaf temperature             [deg C]
   !   ea     : vapour pressure of air       [Pa]
   !   g0     : residual conductance         [mol m-2 s-1]
-  !   g1     : Medlyn slope parameter       [unitless]
+  !   g1     : Ball-Berry slope parameter   [unitless]
   !
   ! Outputs
   !   ci     : intercellular CO2            [same units as Ca]
@@ -33,11 +34,11 @@ contains
     real, intent(in)  :: ca_air    ! ambient CO2
     real, intent(in)  :: tleaf     ! leaf temperature (C)
     real, intent(in)  :: ea        ! vapour pressure air (Pa)
-    real, intent(in)  :: g0, g1    ! Medlyn parameters
+    real, intent(in)  :: g0, g1    ! Ball-Berry parameters
     real, intent(in)  :: SWFAC
     real, intent(out) :: ci, gs
 
-    real :: ei_pa, D_pa, D_kPa
+    real :: ei_pa
     real :: gs_loc, hs
 
     ! saturation vapour pressure at leaf T (Pa)
@@ -46,12 +47,7 @@ contains
     hs = ea / max(ei_pa, 1.0)     ! RH at leaf surface
     hs = min(1.0, max(0.05, hs))
 
-    ! VPD in Pa and kPa (avoid negative / zero)
-    D_pa  = max(ei_pa - ea, 50.0)
-    D_kPa = D_pa / 1000.0d0
-
-    ! Medlyn conductance (for water vapour)
-    ! gs_loc = g0 + 1.6d0 * (1.0d0 + g1 / sqrt(D_kPa)) * Anet / ca_air
+    ! Ball-Berry conductance (for water vapour)
     gs_loc = g0 + g1 * Anet / ca_air * hs
     ! keep gs positive
     gs = max(g0, g0 + SWFAC * (gs_loc - g0))
