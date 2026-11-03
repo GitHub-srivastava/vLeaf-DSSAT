@@ -39,29 +39,29 @@ contains
     real :: gs_mps, gb_mps
 
     ! temperatures in Kelvin
-    tAirK  = tAir  + 273.15d0
-    tLeafK = tLeaf + 273.15d0
+    tAirK  = tAir  + 273.15
+    tLeafK = tLeaf + 273.15
 
     ! conversion m s-1 -> mol m-2 s-1  (Nikolov et al. 1995)
-    convert = pressure / (8.309d0 * tAirK)
+    convert = pressure / (8.309 * tAirK)
 
     ! saturation vapour pressure at leaf temperature [Pa]
-    ei = 0.611d0 * exp(17.502d0 * tLeaf / (240.97d0 + tLeaf)) * 1000.0d0
+    ei = 0.611 * exp(17.502 * tLeaf / (240.97 + tLeaf)) * 1000.0
 
     ! ---------- forced convection (m s-1) ----------
-    gbForced = cForced * tAirK**0.56d0 *                                 &
-               ((tAirK + 120.d0) * (wind / leafDim / pressure))**0.5d0
+    gbForced = cForced * tAirK**0.56 *                                 &
+               ((tAirK + 120.) * (wind / leafDim / pressure))**0.5
 
     ! if eb hasn't been set yet, start with ambient vapour pressure
-    if (eb <= 0.0d0) eb = ea
+    if (eb <= 0.0) eb = ea
 
     ! ---------- free convection (m s-1) ----------
-    TDiff = ( tLeafK / (1.0d0 - 0.378d0 * eb / pressure ) ) -            &
-            ( tAirK  / (1.0d0 - 0.378d0 * ea / pressure ) )
+    TDiff = ( tLeafK / (1.0 - 0.378 * eb / pressure ) ) -            &
+            ( tAirK  / (1.0 - 0.378 * ea / pressure ) )
 
-    gbFree = cFree * tLeafK**0.56d0 *                                    &
-             ((tLeafK + 120.d0)/pressure)**0.5d0 *                       &
-             (abs(TDiff)/leafDim)**0.25d0
+    gbFree = cFree * tLeafK**0.56 *                                    &
+             ((tLeafK + 120.)/pressure)**0.5 *                       &
+             (abs(TDiff)/leafDim)**0.25
 
     ! choose the larger of free / forced
     gb = max(gbFree, gbForced)          ! [m s-1]
@@ -77,7 +77,7 @@ contains
     eb = (gs_mps*ei + gb_mps*ea) / (gs_mps + gb_mps)
 
     ! CO2 at leaf boundary layer [ppm]
-    cb = ca - 1.37d0 * Anet / (Mb * gb)
+    cb = ca - 1.37 * Anet / (Mb * gb)
 
   end subroutine call_boundary
 

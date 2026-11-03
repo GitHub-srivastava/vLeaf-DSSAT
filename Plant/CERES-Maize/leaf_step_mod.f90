@@ -36,9 +36,9 @@ contains
     real, intent(in) :: LAI_eff, Omega
 
     integer, parameter :: max_iter = 100
-    real, parameter :: tol_An   = 0.1d0
-    real, parameter :: tol_Ci   = 0.1d0
-    real, parameter :: tol_T    = 0.1d0
+    real, parameter :: tol_An   = 0.1
+    real, parameter :: tol_Ci   = 0.1
+    real, parameter :: tol_T    = 0.1
 
     ! ===== state (iterated) =====
     real, intent(out) :: An, Ci, gs, gb, eb, cb, tLeaf
@@ -49,39 +49,39 @@ contains
     logical, intent(out) :: converged
 
     ! physical / EB constants
-    real, parameter :: Cp_air   = 29.3d0
-    real, parameter :: sigma_sb = 5.670374d-8
-    real, parameter :: Hfac     = 1.0d0
-    real, parameter :: LEfac    = 1.0d0
-    real, parameter :: LWfac    = 2.0d0
-    real, parameter :: epsLeaf  = 0.94d0
-    real, parameter :: epsSoil  = 0.90d0
+    real, parameter :: Cp_air   = 29.3
+    real, parameter :: sigma_sb = 5.670374e-8
+    real, parameter :: Hfac     = 1.0
+    real, parameter :: LEfac    = 1.0
+    real, parameter :: LWfac    = 2.0
+    real, parameter :: epsLeaf  = 0.94
+    real, parameter :: epsSoil  = 0.90
 
     ! Boundary layer parameters (Nikolov-style)
-    real, parameter :: leafDim  = 0.08d0
-    real, parameter :: cForced  = 4.322d-3
-    real, parameter :: cFree    = 1.6361d-3
-    real, parameter :: s_ratio  = 0.71d0
-    real, parameter :: fsv      = 1.0d0
-    real, parameter :: Mb = 0.5d0 * (1.0d0 + s_ratio)**2 / (1.0d0 + s_ratio**2)
+    real, parameter :: leafDim  = 0.08
+    real, parameter :: cForced  = 4.322e-3
+    real, parameter :: cFree    = 1.6361e-3
+    real, parameter :: s_ratio  = 0.71
+    real, parameter :: fsv      = 1.0
+    real, parameter :: Mb = 0.5 * (1.0 + s_ratio)**2 / (1.0 + s_ratio**2)
 
     ! ===== locals =====
     integer :: iter
     real :: An_prev, Ci_prev, T_prev, gs_prev
     real :: alpha
 
-    alpha = 0.8d0
+    alpha = 0.8
     converged = .false.
-    errA  = 1.0d0
-    errCi = 1.0d0
-    errT  = 1.0d0
+    errA  = 1.0
+    errCi = 1.0
+    errT  = 1.0
 
-    An    = 0.1d0*ca
-    Ci    = 0.7d0*ca
-    gs    = 0.2d0
-    gb    = 1.5d0
-    eb    = 2.01d3
-    cb    = 0.7d0*ca
+    An    = 0.1*ca
+    Ci    = 0.7*ca
+    gs    = 0.2
+    gb    = 1.5
+    eb    = 2.01e3
+    cb    = 0.7*ca
     tLeaf = tAir
 
     do iter = 1, max_iter

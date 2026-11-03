@@ -67,3 +67,16 @@ Plant/ORYZA
 .vs/*
 .history/*
 Resources/R*
+#vLeaf validation data (local only)
+Drewry_Data/
+#Fortran unit files written by DSSAT runs
+fort.*
+#Claude Code per-user settings
+.claude/settings.local.json
+#Excel lock files
+~$*
+#Python (calibration scripts)
+__pycache__/
+*.py[cod]
+.venv/
+.ipynb_checkpoints/

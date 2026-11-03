@@ -9,17 +9,18 @@ module VLEAF_PARAMS
   real, public :: vcmax25, jmax25, vpmax25
   real, public :: theta, gbs, alpha, x
   real, public :: rd25, sco25
+  real, public :: eta        ! C retained as DM after plant respiration
   integer, public :: switch
 
   contains
 
   subroutine VLEAF_SET_PARAMS(intercept_in, slope_in, vpr_in, vcmax_in, jmax_in, vpmax_in, &
-                              theta_in, gbs_in, alpha_in, x_in, rd25_in, sco25_in, switch_in)
+                              theta_in, gbs_in, alpha_in, x_in, rd25_in, sco25_in, eta_in, switch_in)
     implicit none
     real, intent(in) :: intercept_in, slope_in, vpr_in
     real, intent(in) :: vcmax_in, jmax_in, vpmax_in
     real, intent(in) :: theta_in, gbs_in, alpha_in, x_in
-    real, intent(in) :: rd25_in, sco25_in
+    real, intent(in) :: rd25_in, sco25_in, eta_in
     integer, intent(in) :: switch_in
 
     intercept = intercept_in
@@ -34,6 +35,7 @@ module VLEAF_PARAMS
     x         = x_in
     rd25      = rd25_in
     sco25     = sco25_in
+    eta       = eta_in
     switch    = switch_in
 
     params_set = .true.

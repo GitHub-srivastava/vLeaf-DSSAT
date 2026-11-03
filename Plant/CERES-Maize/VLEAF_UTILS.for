@@ -5,20 +5,25 @@
       CONTAINS
 
 C=======================================================================
-C  READ_MZ_PARAMS: read stomatal params from NAMELIST file
-C  File format example (MY_PARAMS.TXT):
+C  MZ_RPARAMS: read vLeaf calibration constants from MY_PARAMS.TXT
+C  (optional; built-in defaults are used for any key not present).
+C  File format: one "key value" pair per line, e.g.
+C      vcmax25  55.0
+C      eta      0.75
 C=======================================================================
 
       SUBROUTINE MZ_RPARAMS(intercept, slope, vpr25, vcmax25, jmax25,
-     & vpmax25, theta, gbs, alpha, x, rd25, sco25, switch) ! Output
+     & vpmax25, theta, gbs, alpha, x, rd25, sco25, eta,
+     & switch)                                              ! Output
 
       IMPLICIT NONE
+      EXTERNAL GETLUN
       REAL, INTENT(OUT) :: intercept, slope, vpr25, vcmax25, jmax25
       REAL, INTENT(OUT) :: vpmax25, theta, gbs, alpha, x
-      REAL, INTENT(OUT) :: rd25, sco25
+      REAL, INTENT(OUT) :: rd25, sco25, eta
       INTEGER, INTENT(OUT) :: switch
 
-      INTEGER :: ios
+      INTEGER :: ios, LUN
       CHARACTER(LEN=32) :: key
       REAL :: val
 
@@ -35,15 +40,23 @@ C=======================================================================
       x = 0.4
       rd25 = 0.05
       sco25 = 2590.0
+C     Fraction of assimilated carbon retained as dry matter after
+C     growth/maintenance respiration of non-leaf organs (leaf Rd,
+C     day and night, is already in Anet). Physiologically ~0.7-0.8
+C     for maize, but the default is 1.0 because the other defaults
+C     here are not yet calibrated for it: calibrate eta together
+C     with vcmax25 and rd25.
+      eta = 1.0
       switch = 1
 
-      OPEN(UNIT=99, FILE='MY_PARAMS.TXT', STATUS='OLD', IOSTAT=ios)
+      CALL GETLUN('VLEAFPAR', LUN)
+      OPEN(UNIT=LUN, FILE='MY_PARAMS.TXT', STATUS='OLD', IOSTAT=ios)
       IF (ios /= 0) THEN
          RETURN   ! leave defaults
       END IF
 
    10 CONTINUE
-      READ(99, *, IOSTAT=ios) key, val
+      READ(LUN, *, IOSTAT=ios) key, val
       IF (ios /= 0) GOTO 20
       SELECT CASE (TRIM(key))
       CASE ("intercept"); intercept = val
@@ -58,12 +71,13 @@ C=======================================================================
       CASE ("x"); x = val
       CASE ("rd25"); rd25 = val
       CASE ("sco25"); sco25 = val
+      CASE ("eta"); eta = val
       CASE ("switch"); switch = NINT(val)
       END SELECT
       GOTO 10
 
    20 CONTINUE
-      CLOSE(99)
+      CLOSE(LUN)
       END SUBROUTINE MZ_RPARAMS
 
 C=======================================================================

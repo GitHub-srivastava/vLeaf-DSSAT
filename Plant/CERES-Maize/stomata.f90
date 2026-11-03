@@ -53,7 +53,7 @@ contains
     gs = max(g0, g0 + SWFAC * (gs_loc - g0))
 
     ! simple mass-balance for ci (assume cb ≈ ca_air)
-    ci = ca_air - 1.6d0 * Anet / gs
+    ci = ca_air - 1.6 * Anet / gs
     ci = min(0.95*ca_air, max(0.05*ca_air, ci))
 
   contains
@@ -61,7 +61,7 @@ contains
     ! saturation vapour pressure (Pa) at temperature T (C)
     real function sat_vp(T) result(es)
       real, intent(in) :: T
-      es = 0.611d0 * exp(17.502d0*T/(240.97d0 + T)) * 1000.0d0
+      es = 0.611 * exp(17.502*T/(240.97 + T)) * 1000.0
     end function sat_vp
 
   end subroutine call_stomata

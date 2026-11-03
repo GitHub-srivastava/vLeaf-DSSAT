@@ -6,12 +6,12 @@
 !  Revision history
 !
 !                 Written
-!  02/07/1993 PWW Header revision and minor changes
-!  02/07/1993 PWW Switch block added, etc
-!  06/21/1994 JTR & BDB Updated PCARB calculation
-!  03/29/2001 WDB Converted to modular version
-!  12/01/2000 WDB Major restructuring for 2002 release
-!  04/15/2002 WDB Added pest damage and eco and species file
+!  02/07/1993 PWW Header revision and minor changes   
+!  02/07/1993 PWW Switch block added, etc                     
+!  06/21/1994 JTR & BDB Updated PCARB calculation                       
+!  03/29/2001 WDB Converted to modular version               
+!  12/01/2000 WDB Major restructuring for 2002 release      
+!  04/15/2002 WDB Added pest damage and eco and species file 
 !  06/11/2002 GH  Modified for Y2K
 !  08/12/2003 CHP Added I/O error checking
 !  12/16/2004 CHP Changed conversion for grain weight from PLTPOP to
@@ -20,9 +20,9 @@
 !                   barrenness factor.
 !  05/11/2005 CHP Calculate N loss in senesced leaves for N balance.
 !  08/11/2005 JIL Minor revisions to eliminate carbon imbalance
-!                 Do not allow increase in leaf number during
+!                 Do not allow increase in leaf number during 
 !                   expansion of final leaf.
-!  10/04/2005 JIL Set MDATE upon failure due to cold stress or water
+!  10/04/2005 JIL Set MDATE upon failure due to cold stress or water 
 !                   stress.
 !  03/30/2006 CHP Added composition of senesced matter for SOM modules
 !  05/01/2006 CHP Added RS canopy height computation
@@ -30,7 +30,7 @@
 !                 to ecotype file (TSEN)
 !  07/13/2006 CHP Added P model
 !  10/31/2007 CHP Added simple K model.
-!  01/03/2013 CHP Initialization for RLV prevents carryover
+!  01/03/2013 CHP Initialization for RLV prevents carryover 
 !  04/14/2021 CHP Added CropStatus
 !----------------------------------------------------------------------
 !
@@ -39,7 +39,7 @@
 !  Calls  : NFACTO NUPTAK
 !----------------------------------------------------------------------
 
-      SUBROUTINE MZ_GROSUB (DYNAMIC, ISWITCH,
+      SUBROUTINE MZ_GROSUB (DYNAMIC, ISWITCH, 
      &      ASMDOT, CDAY, CO2, DLAYR, DS, DTT, EOP, FILEIO,   !Input
      &      FracRts, ISTAGE, KG2PPM, LL, NLAYR, NH4, NO3, P3, !Input
      &      PLTPOP, PPLTD, RLV, RTDEP, RUE, SAT, SeedFrac,    !Input
@@ -66,7 +66,7 @@
       USE ModuleData
       IMPLICIT  NONE
 
-      EXTERNAL GETLUN, FIND, ERROR, IGNORE, MZ_NFACTO, TABEX,
+      EXTERNAL GETLUN, FIND, ERROR, IGNORE, MZ_NFACTO, TABEX, 
      &  MZ_NUPTAK, MZ_KUPTAK, P_Ceres, YR_DOY, WARNING, CURV,
      &  MZ_VLEAF
       SAVE
@@ -74,288 +74,288 @@
 !                         Variable Declaration
 !----------------------------------------------------------------------
 
-      REAL        AGEFAC
-      REAL        APTNUP
+      REAL        AGEFAC            
+      REAL        APTNUP      
       REAL        AREALF
       REAL        ASGDD
       REAL        ASMDOT
-      REAL        BIOMAS
+      REAL        BIOMAS 
       REAL        BSGDD
       CHARACTER*80 C80
-      REAL        CANHT
+      REAL        CANHT     
 !**
-      REAL        CANHT_POT !added 26May04 RS
+      REAL        CANHT_POT !added 26May04 RS     
 !**
-      REAL        CANNAA
-      REAL        CANWAA
-      REAL        CANWH
-      REAL        CARBO
-      REAL        CARBOT
-      INTEGER     CDAY
+      REAL        CANNAA      
+      REAL        CANWAA 
+      REAL        CANWH     
+      REAL        CARBO       
+      REAL        CARBOT       
+      INTEGER     CDAY     
       INTEGER     CMAT
-      REAL        CNSD1
-      REAL        CNSD2
-      REAL        CPSD1
-      REAL        CPSD2
-      REAL        CUMPH
-      REAL        CO2X(10)
-      REAL        CO2Y(10)
-      REAL        CO2
-      INTEGER     CropStatus
-      REAL        CSD1
-      REAL        CSD2
-      REAL        CUMDTTEG
+      REAL        CNSD1       
+      REAL        CNSD2        
+      REAL        CPSD1       
+      REAL        CPSD2        
+      REAL        CUMPH       
+      REAL        CO2X(10)    
+      REAL        CO2Y(10)    
+      REAL        CO2 
+      INTEGER     CropStatus        
+      REAL        CSD1        
+      REAL        CSD2        
+      REAL        CUMDTTEG      
       REAL        CURV
-      REAL        DLAYR(NL)
-      REAL        DS(NL)
-!      REAL        DM
-      INTEGER     DOY
-      REAL        DTT
-      REAL        DUMMY
-      INTEGER     DYNAMIC
-      REAL        EARS
-      REAL        EARWT
-      CHARACTER*6     ECONO
-      INTEGER     EMAT
+      REAL        DLAYR(NL)   
+      REAL        DS(NL)   
+!      REAL        DM          
+      INTEGER     DOY         
+      REAL        DTT         
+      REAL        DUMMY           
+      INTEGER     DYNAMIC     
+      REAL        EARS        
+      REAL        EARWT       
+      CHARACTER*6     ECONO 
+      INTEGER     EMAT        
       REAL        EOP
       REAL        EP1
-      INTEGER         ERR
-      CHARACTER*6     ERRKEY
-      PARAMETER       (ERRKEY='MZ_GRO')
-      CHARACTER*30    FILEIO
-      CHARACTER*12    FILEC
+      INTEGER         ERR 
+      CHARACTER*6     ERRKEY          
+      PARAMETER       (ERRKEY='MZ_GRO')   
+      CHARACTER*30    FILEIO 
+      CHARACTER*12    FILEC     
       CHARACTER*92    FILECC
       CHARACTER*12    FILES
-      CHARACTER*12    FILEE
-      INTEGER         FOUND
+      CHARACTER*12    FILEE 
+      INTEGER         FOUND  
       REAL        FSLFW
-      REAL        FSLFN
-      REAL        G2
-      REAL        G3
-      REAL        GNP
-      REAL        GNUP
-      REAL        GPP
-      REAL        GPSM
-      REAL        GRAINN
-      REAL        GRF
-      REAL        GRNWT
-      REAL        GROEAR
-      REAL        GROGRN
-      REAL        GROLF
-      REAL        GRORT
-      REAL        GROSTM
+      REAL        FSLFN  
+      REAL        G2    
+      REAL        G3          
+      REAL        GNP         
+      REAL        GNUP        
+      REAL        GPP         
+      REAL        GPSM        
+      REAL        GRAINN      
+      REAL        GRF         
+      REAL        GRNWT       
+      REAL        GROEAR      
+      REAL        GROGRN      
+      REAL        GROLF       
+      REAL        GRORT       
+      REAL        GROSTM      
       REAL        HI
       REAL        HIP
-      INTEGER     ICOLD
-      INTEGER     ICSDUR
-      CHARACTER   IDETO*1
+      INTEGER     ICOLD       
+      INTEGER     ICSDUR      
+      CHARACTER   IDETO*1     
       REAL        IPAR
       INTEGER     ISECT
-      INTEGER     ISTAGE
+      INTEGER     ISTAGE    
       CHARACTER*1 ISWNIT
-      CHARACTER*1 ISWWAT
-      CHARACTER*1 ISWPOT
+      CHARACTER*1 ISWWAT      
+      CHARACTER*1 ISWPOT      
 !      REAL        K1
-      REAL        KG2PPM(NL)
+      REAL        KG2PPM(NL)   
       INTEGER     L
-      REAL        LAI
+      REAL        LAI         
       REAL        LAI_eff
       REAL        LAIDOT
-      INTEGER     LEAFNO
-      REAL        LEAFNOE
+      INTEGER     LEAFNO 
+      REAL        LEAFNOE 
       REAL        CumLeafSenes    !today's cumul. leaf senescence
       REAL        CumLeafSenesY   !yesterday's cumul. leaf senescence
       REAL        CumLfNSenes     !cumul. N loss in senesced leaves
 !     REAL HARVFRAC(2)
-      INTEGER     LINC
-      REAL        LFWT
+      INTEGER     LINC  
+      REAL        LFWT        
       REAL        LFWTE
       REAL        LIFAC
       REAL        LL(NL)
-      INTEGER     LNUM
-      INTEGER     LUNCRP
-      INTEGER     LUNIO
+      INTEGER     LNUM          
+      INTEGER     LUNCRP            
+      INTEGER     LUNIO 
       INTEGER     MDATE
       REAL        MAXLAI
-      REAL        NDEF3
-      REAL        NFAC
-      REAL        NH4(NL)
-      INTEGER     NLAYR
-      REAL        NO3(NL)
-      INTEGER     NOUTDO
-      REAL        NPOOL
-      REAL        NPOOL1
-      REAL        NPOOL2
-      REAL        NSDR
-      REAL        NSINK
-      REAL        NSTRES
-      INTEGER     NWSD
-      REAL        P1
-      REAL        P2
-      REAL        P3
-      REAL        P5
-      REAL        PAR
+      REAL        NDEF3       
+      REAL        NFAC        
+      REAL        NH4(NL)     
+      INTEGER     NLAYR       
+      REAL        NO3(NL)     
+      INTEGER     NOUTDO      
+      REAL        NPOOL       
+      REAL        NPOOL1      
+      REAL        NPOOL2      
+      REAL        NSDR        
+      REAL        NSINK       
+      REAL        NSTRES      
+      INTEGER     NWSD 
+      REAL        P1             
+      REAL        P2    
+      REAL        P3         
+      REAL        P5          
+      REAL        PAR         
       REAL        PARSR
-      CHARACTER*80    PATHCR
+      CHARACTER*80    PATHCR 
       CHARACTER*80    PATHSR
-      CHARACTER*80    PATHER
-      REAL        PC
+      CHARACTER*80    PATHER 
+      REAL        PC          
       REAL        PCARB
       REAL        PCNGRN
-      REAL        PCNL
-      REAL        PCNRT
+      REAL        PCNL 
+      REAL        PCNRT     
       REAL        PCNSD
-      REAL        PCNVEG
+      REAL        PCNVEG      
       REAL        PCNST
-      REAL        PCO2
-      REAL        PDWI
+      REAL        PCO2        
+      REAL        PDWI        
       REAL        PRFTC(4)
       REAL        SLPF
-      REAL        PGRORT
-      REAL        PHINT
-      REAL        PLA
-      REAL        PLAE
-      REAL        PLAG
-      REAL        PLAS
-      REAL        PLTPOP
+      REAL        PGRORT      
+      REAL        PHINT       
+      REAL        PLA    
+      REAL        PLAE     
+      REAL        PLAG        
+      REAL        PLAS        
+      REAL        PLTPOP      
       REAL        PODNO
       REAL        PODWT
       REAL        PORMIN
-      REAL        PPLTD
-      REAL        PRFT
-      REAL        PTF
-      REAL        RANC
+      REAL        PPLTD 
+      REAL        PRFT        
+      REAL        PTF         
+      REAL        RANC        
       REAL        RANCE
-      REAL        RCNP
-      REAL        RGFILL
-      REAL        RGFIL(4)
-      REAL        RLV(NL)
+      REAL        RCNP        
+      REAL        RGFILL 
+      REAL        RGFIL(4)     
+      REAL        RLV(NL)     
       REAL        RLWR
-      REAL        RMNC
+      REAL        RMNC        
       REAL        RNLAB
       REAL        RNOUT
-      REAL        ROOTN
+      REAL        ROOTN 
       REAL        RSGR
       REAL        RSGRT
-      INTEGER     RSTAGE
-      REAL        RTDEP
+      INTEGER     RSTAGE      
+      REAL        RTDEP     
       REAL        RTWT
       REAL        RTWTE
-      REAL        RTWTO
-      REAL        RUE
+      REAL        RTWTO        
+      REAL        RUE         
       REAL        RWUEP1
-      REAL        ROWSPC
+      REAL        ROWSPC      
       REAL        RWUMX
-      REAL        SAT(NL)
-      REAL        SATFAC
+      REAL        SAT(NL)     
+      REAL        SATFAC      
       REAL        SDSZ
       REAL        SDWT
-      CHARACTER*6     SECTION
+      CHARACTER*6     SECTION 
       REAL        SEEDNO
-      REAL        SEEDRV
+      REAL        SEEDRV      
       REAL        SEEDRVE
-      REAL        SENLA   !, SENLAY
-      REAL        SFAC
-      REAL        SHF(NL)
+      REAL        SENLA   !, SENLAY    
+      REAL        SFAC        
+      REAL        SHF(NL)     
       REAL        SHELPC
-      REAL        SI1(6)
-      REAL        SI2(6)
-      REAL        SI3(6)
-      REAL        SI4(6)
-      REAL        SI5(6)
-      REAL        SI6(6)
-      REAL        SKERWT
-      REAL        SLAN
+      REAL        SI1(6)      
+      REAL        SI2(6)      
+      REAL        SI3(6)      
+      REAL        SI4(6)      
+      REAL        SI5(6)      
+      REAL        SI6(6)      
+      REAL        SKERWT      
+      REAL        SLAN        
       REAL        SLA
-      REAL        SLFC
-      REAL        SLFN
-      REAL        SLFT
-      REAL        SLFW
-      REAL        SRAD
-      INTEGER     STGDOY(20)
-      REAL        Stg2CLS
+      REAL        SLFC        
+      REAL        SLFN        
+      REAL        SLFT        
+      REAL        SLFW        
+      REAL        SRAD        
+      INTEGER     STGDOY(20) 
+      REAL        Stg2CLS 
       REAL        STMWTO
-      REAL        STMWT
-      REAL        STMWTE
-      REAL        STOVER
-      REAL        STOVN
-      REAL        STOVWT
-      REAL        SUMDTT
+      REAL        STMWT   
+      REAL        STMWTE    
+      REAL        STOVER      
+      REAL        STOVN       
+      REAL        STOVWT      
+      REAL        SUMDTT      
       REAL        SUMEX
-      REAL        SUMP
-      REAL        SUMRL
-      REAL        FracRts(NL)
-      REAL        SW(NL)
-      REAL        SWEXF
-      REAL        SWFAC
-      REAL        SWIDOT
-      REAL        SWMAX
-      REAL        SWMIN
-      REAL        TABEX
-      REAL        TANC
+      REAL        SUMP   
+      REAL        SUMRL     
+      REAL        FracRts(NL)   
+      REAL        SW(NL) 
+      REAL        SWEXF     
+      REAL        SWFAC       
+      REAL        SWIDOT  
+      REAL        SWMAX       
+      REAL        SWMIN       
+      REAL        TABEX       
+      REAL        TANC 
       REAL        TANCE
-      REAL        TAVGD
-      REAL        TCNP
-      REAL        TEMPM
-      REAL        TFAC
-      REAL        TI
-      REAL        TLNO
-      REAL        TMAX
-      REAL        TMNC
+      REAL        TAVGD       
+      REAL        TCNP        
+      REAL        TEMPM       
+      REAL        TFAC        
+      REAL        TI         
+      REAL        TLNO        
+      REAL        TMAX        
+      REAL        TMNC        
       REAL        TNLAB
-      REAL        TMIN
+      REAL        TMIN        
       REAL        TOPWT
-      REAL        TOTNUP
-      REAL        TRNU
+      REAL        TOTNUP      
+      REAL        TRNU    
       REAL        TRWUP
       REAL        TSEN
-      REAL        TSS(NL)
-      REAL        TURFAC
-      REAL        UNH4(NL)
-      REAL        UNO3(NL)
-      REAL        VMNC
-      REAL        VANC
-      CHARACTER*6     VARNO
-      CHARACTER*16    VRNAME
-      REAL        VSTAGE
+      REAL        TSS(NL)    
+      REAL        TURFAC      
+      REAL        UNH4(NL)    
+      REAL        UNO3(NL)    
+      REAL        VMNC        
+      REAL        VANC  
+      CHARACTER*6     VARNO          
+      CHARACTER*16    VRNAME  
+      REAL        VSTAGE      
       REAL        WLIDOT
       REAL        WRIDOT
-      REAL        WSIDOT
+      REAL        WSIDOT 
       REAL        WTLF
-      REAL        WTNCAN
-      REAL        WTNLF
-      REAL        WTNSD
-      REAL        WTNST
-      REAL        WTNUP
-      REAL        WTNVEG
-      REAL        XANC
+      REAL        WTNCAN      
+      REAL        WTNLF       
+      REAL        WTNSD       
+      REAL        WTNST       
+      REAL        WTNUP       
+      REAL        WTNVEG      
+      REAL        XANC        
       REAL        XLAI
-      REAL        XHLAI
-      REAL        XLFWT
-      REAL        XGNP
-      REAL        XN
-      REAL        XNF
-      REAL        XNTI
-      REAL        XSTAGE
-      REAL        YIELD
-      REAL        YIELDB
+      REAL        XHLAI      
+      REAL        XLFWT       
+      REAL        XGNP        
+      REAL        XN          
+      REAL        XNF      
+      REAL        XNTI        
+      REAL        XSTAGE           
+      REAL        YIELD       
+      REAL        YIELDB      
       REAL        CARBO_vLeaf
       REAL        EOPVLF
       REAL        NSTRESS
-      INTEGER     YR, YRDOY
+      INTEGER     YR, YRDOY    
 
 !     Added to send messages to WARNING.OUT
       CHARACTER*78 MESSAGE(10)
 
 !     CHP added for P model 9/5/2004
-      CHARACTER*1 ISWPHO
+      CHARACTER*1 ISWPHO      
       INTEGER     YRPLT
       REAL        SPi_AVAIL(NL), PUptake(NL)    !, RWU(NL)
 !      REAL        SPi_Labile(NL)
       REAL        FSLFP, PStres1
-      REAL        PStres2, SeedFrac, VegFrac, SLFP
+      REAL        PStres2, SeedFrac, VegFrac, SLFP      
       REAL PConc_Shut, PConc_Root, PConc_Shel, PConc_Seed
-!      REAL        CPSD1, CPSD2, SI5(6), SI6(6)
+!      REAL        CPSD1, CPSD2, SI5(6), SI6(6)  
 !      real        PCPVEG, N2P !P conc in veg., N:P ratio
 
 !     Transfer mass from stem to ear -- need to transfer P also
@@ -367,11 +367,11 @@
 !     K model
       REAL, DIMENSION(NL) :: KUptake, SKi_Avail
       REAL KSTRES
-
-      TYPE (ResidueType) SENESCE
+       
+      TYPE (ResidueType) SENESCE 
       TYPE (SwitchType)  ISWITCH
       TYPE (WeatherType) WEATHER
-
+  
 !----------------------------------------------------------------------
 !     CHP 3/31/2006
 !     Proportion of lignin in STOVER and Roots
@@ -400,17 +400,17 @@
           !     Read input file name (ie. DSSAT45.INP) and path
           !-------------------------------------------------------
           CALL GETLUN('FILEIO', LUNIO)
-          OPEN (LUNIO, FILE = FILEIO,STATUS = 'OLD',IOSTAT=ERR)
+          OPEN (LUNIO, FILE = FILEIO,STATUS = 'OLD',IOSTAT=ERR)  
           IF (ERR .NE. 0) CALL ERROR(ERRKEY,ERR,FILEIO,0)
           REWIND (LUNIO)
           READ(LUNIO,50,IOSTAT=ERR) FILES, PATHSR; LNUM = 7
    50     FORMAT(//////,15X,A12,1X,A80)
           IF (ERR .NE. 0) CALL ERROR(ERRKEY,ERR,FILEIO,LNUM)
 
-          READ(LUNIO,51,IOSTAT=ERR) FILEE, PATHER; LNUM = LNUM + 1
+          READ(LUNIO,51,IOSTAT=ERR) FILEE, PATHER; LNUM = LNUM + 1   
           IF (ERR .NE. 0) CALL ERROR(ERRKEY,ERR,FILEIO,LNUM)
 
-          READ(LUNIO,51,IOSTAT=ERR) FILEC, PATHCR; LNUM = LNUM + 1
+          READ(LUNIO,51,IOSTAT=ERR) FILEC, PATHCR; LNUM = LNUM + 1 
           IF (ERR .NE. 0) CALL ERROR(ERRKEY,ERR,FILEIO,LNUM)
    51     FORMAT(15X,A12,1X,A80)
           !------------------------------------------------------
@@ -435,9 +435,9 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
               CALL ERROR(SECTION, 42, FILEIO, LNUM)
           ELSE
             READ (LUNIO,1800,IOSTAT=ERR) VARNO,VRNAME,ECONO,
-     %                 P1,P2,P5,G2,G3,PHINT
-!CHP 1800        FORMAT (A6,1X,A16,1X,A6,1X,F6.1,F6.3,2(F6.1),2(F6.2))
-1800        FORMAT (A6,1X,A16,1X,A6,1X,6F6.0)
+     %                 P1,P2,P5,G2,G3,PHINT  
+!CHP 1800        FORMAT (A6,1X,A16,1X,A6,1X,F6.1,F6.3,2(F6.1),2(F6.2))    
+1800        FORMAT (A6,1X,A16,1X,A6,1X,6F6.0)    
             IF (ERR .NE. 0) CALL ERROR(ERRKEY,ERR,FILEIO,LNUM)
           ENDIF
 
@@ -445,7 +445,7 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
 
 !         ************************************************************
 !         ************************************************************
-!
+! 
 !                 READ SPECIES FILE
 !         ************************************************************
 !         ************************************************************
@@ -550,7 +550,7 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
         READ(C80,'(8X,F6.3)',IOSTAT=ERR) CARBOT
         IF (ERR .NE. 0) CALL ERROR(ERRKEY,ERR,FILECC,LNUM)
 
-      ENDIF
+      ENDIF    
       REWIND(LUNCRP)
       !----------------------------------------------------------------
       !        Find and Read Emergence Initial Conditions
@@ -612,8 +612,8 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
         IF (ERR .NE. 0) CALL ERROR(ERRKEY,ERR,FILECC,LNUM)
 
 ! CHP/US 04/19/2007 Coefficients pulled out to species file.
-!          TCNP = EXP (1.52  - 0.160 * XSTAGE) / 100.0
-!          TCNP = EXP (CTCNP1 - CTCNP2 * XSTAGE) / 100.0
+!          TCNP = EXP (1.52  - 0.160 * XSTAGE) / 100.0  
+!          TCNP = EXP (CTCNP1 - CTCNP2 * XSTAGE) / 100.0  
 !       Default values: CTCNP1 = 1.52; CTCNP2 = 0.160
         CALL IGNORE(LUNCRP,LNUM,ISECT,C80)
         READ(C80,'(9X,F8.3)',IOSTAT=ERR) CTCNP1
@@ -624,7 +624,7 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
         ELSE
           CALL IGNORE(LUNCRP,LNUM,ISECT,C80)
           READ(C80,'(9X,F8.3)',IOSTAT=ERR) CTCNP2
-          IF (ERR /= 0 .OR. ISECT /= 1 .OR. CTCNP2 < 1.E-6) THEN
+          IF (ERR /= 0 .OR. ISECT /= 1 .OR. CTCNP2 < 1.E-6) THEN 
             CTCNP1 = 1.52
             CTCNP2 = 0.160
           ENDIF
@@ -663,7 +663,7 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
 
       CALL SenLig_Ceres(PLIGLF=PLIGLF, PLIGRT=PLIGRT)
 
-! JIL 08/01/2006 parameters for ear growth
+! JIL 08/01/2006 parameters for ear growth 
 !** Read in SPE file?
 
           ASGDD = 100.0        !Ending of ear growth (gdd)
@@ -671,16 +671,16 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
 
           APTNUP = 0.0
           AREALF = 0.0
-          ASMDOT = 0.0
+          ASMDOT = 0.0  
           BIOMAS = 0.0
-          CANHT  = 0
+          CANHT  = 0                
 !**
-!         set to 1.6 m, need to become user-input; RS 26May04
-          CANHT_POT = 1.6
+!         set to 1.6 m, need to become user-input; RS 26May04   
+          CANHT_POT = 1.6              
 !**
           CANNAA = 0.0
           CANWAA = 0.0
-          CANWH  = 0
+          CANWH  = 0  
           CARBO  = 0.0
 !          CSD1   = 0.0
 !          CSD2   = 0.0
@@ -692,7 +692,7 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
           CUMPH  = 0.0
 !          DM     = 0.0
           DUMMY  = 0.0
-          EARS   = 0.0
+          EARS   = 0.0 
           EARWT  = 0.0
           EMAT   = 0
           EP1    = 0.0
@@ -741,7 +741,7 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
           PODNO  = 0.0
           PODWT  = 0.0
           PRFT   = 0.0
-          PPLTD  = 0.0
+          PPLTD  = 0.0  
           PTF    = 0.0
           RANC   = 0.0
           RLV = 0.0     !CHP 1/3/2013
@@ -763,7 +763,7 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
           SLA    = 0.0
           SKERWT = 0.0
           SLAN = 0.0
-          SLFC   = 0.0
+          SLFC   = 0.0  
           SLFN   = 0.0
           SLFP   = 0.0
           SLFT   = 0.0
@@ -785,7 +785,7 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
           SUMEX  = 0.0
           SWEXF  = 0.0
           SWFAC  = 1.0
-          SWIDOT = 0.0
+          SWIDOT = 0.0 
           SWMAX = 0.0
           SWMIN = 0.0
           TANC   = TANCE
@@ -806,11 +806,11 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
           UNO3   = 0.0      !CHP 1/3/2013
           UNH4   = 0.0      !CHP 1/3/2013
           VANC   = 0.0
-          VMNC   = 0.0
+          VMNC   = 0.0 
           VSTAGE = 0.0
-          WLIDOT = 0.0
-          WRIDOT = 0.0
-          WSIDOT = 0.0
+          WLIDOT = 0.0 
+          WRIDOT = 0.0  
+          WSIDOT = 0.0  
           WTLF   = 0.0
           WTNCAN = 0.0
           WTNLF  = 0.0
@@ -832,7 +832,7 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
 
           IF (ISWNIT .NE. 'N') THEN
              CALL MZ_NFACTO(DYNAMIC,TANC,TCNP,TMNC,
-     %       AGEFAC,NDEF3,NFAC,NSTRES)
+     %       AGEFAC,NDEF3,NFAC,NSTRES)         
           ELSE
               AGEFAC = 1.0
               NSTRES = 1.0
@@ -863,7 +863,7 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
           CALL YR_DOY(YRDOY, YR, DOY)
           CALL MZ_VLEAF(DYNAMIC, LAI, LAI_eff, YR, DOY, SWFAC,
      &     NSTRESS,CARBO_vLeaf, EOPVLF, WEATHER, CO2)  !Output
-!-----------------------------------------------------------------------
+!-----------------------------------------------------------------------  
 !-----------------------------------------------------------------------
 !
 !                     DYNAMIC = RATE
@@ -879,14 +879,14 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
 !
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
-      ELSEIF(DYNAMIC.EQ.INTEGR) THEN
-
+      ELSEIF(DYNAMIC.EQ.INTEGR) THEN   
+   
           SENESCE % ResWt  = 0.0
           SENESCE % ResLig = 0.0
           SENESCE % ResE   = 0.0
           KUPTAKE = 0.0
 
-!         Keep yesterdays cumulative senescence
+!         Keep yesterdays cumulative senescence 
           CumLeafSenesY = CumLeafSenes
 
 !      Need to set these at the beg. of each new growth stage. From phasei
@@ -894,9 +894,9 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
 !      This code was moved from phenol or phasei in Generic CERES v 3.9
 
 
-          IF (YRDOY == STGDOY(1) .OR. YRDOY == STGDOY(2) .OR.
-     &        YRDOY == STGDOY(5) .OR. YRDOY == STGDOY(6) .OR.
-     &        YRDOY == STGDOY(7) .OR. YRDOY == STGDOY(8)) THEN
+          IF (YRDOY == STGDOY(1) .OR. YRDOY == STGDOY(2) .OR. 
+     &        YRDOY == STGDOY(5) .OR. YRDOY == STGDOY(6) .OR. 
+     &        YRDOY == STGDOY(7) .OR. YRDOY == STGDOY(8)) THEN 
             ICSDUR = 1
           ENDIF
 
@@ -926,10 +926,10 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
 
           IF(YRDOY.EQ.STGDOY(3)) THEN
 ! JIL 03/07/2006 remove ear DW initialization
-!              EARWT  = 0.167*STMWT
-!              STMWT  = STMWT - EARWT
+!              EARWT  = 0.167*STMWT    
+!              STMWT  = STMWT - EARWT      
 
-              SWMIN  = STMWT*0.85
+              SWMIN  = STMWT*0.85         
               SUMP   = 0.0
               !CNSD1  = 0.0
               !CNSD2  = 0.0
@@ -943,9 +943,9 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
           ENDIF
 
           IF(YRDOY.EQ.STGDOY(4)) THEN
-              SWMAX  = STMWT
-              VANC   = TANC
-              VMNC   = TMNC
+              SWMAX  = STMWT          
+              VANC   = TANC       
+              VMNC   = TMNC       
               EMAT   = 0
               !CNSD1  = 0.0
               !CNSD2  = 0.0
@@ -998,16 +998,16 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
 
           IF(YRDOY.EQ.STGDOY(9)) THEN
               !Emergence
-              STMWT   = STMWTE
-              RTWT    = RTWTE
-              LFWT    = LFWTE
-              STOVWT  = LFWT+STMWT
+              STMWT   = STMWTE          
+              RTWT    = RTWTE        
+              LFWT    = LFWTE         
+              STOVWT  = LFWT+STMWT     
               SEEDRV  = SEEDRVE
               BIOMAS = STOVWT
-              LEAFNO = INT(LEAFNOE)
+              LEAFNO = INT(LEAFNOE)       
               PLA     = PLAE
               SENLA  = 0.0
-              LAI    = PLTPOP*PLA*0.0001
+              LAI    = PLTPOP*PLA*0.0001 
               CUMPH   = 0.514
               IF (ISWNIT .NE. 'N') THEN
                   GRAINN = 0.000
@@ -1039,23 +1039,23 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
           !-------------------------------------------------------------
           !           Begin Rate and Integration Calculations
           !-------------------------------------------------------------
-
+      
           TEMPM = (TMAX + TMIN)*0.5   !Mean air temperature, C
 
           !-------------------------------------------------------------
           !           Compute critical nitrogen contents
           !-------------------------------------------------------------
 ! CHP/US 04/19/2007 Coefficients pulled out to species file.
-!          TCNP = EXP (1.52-0.160*XSTAGE)/100.0
-          TCNP = EXP (CTCNP1 - CTCNP2 * XSTAGE) / 100.0
-! SPE          TMNC = 0.0045
+!          TCNP = EXP (1.52-0.160*XSTAGE)/100.0  
+          TCNP = EXP (CTCNP1 - CTCNP2 * XSTAGE) / 100.0  
+! SPE          TMNC = 0.0045                        
 !          TMNC = TMNCO    !Where is TMNCO given value?
           IF (XSTAGE .LT. 4.0) THEN
-              TMNC =  (1.25-0.200*XSTAGE)/100.0
+              TMNC =  (1.25-0.200*XSTAGE)/100.0 
           ENDIF
 
           !-------------------------------------------------------------
-          !        Compute Nitrogen Stress Factors
+          !        Compute Nitrogen Stress Factors 
           !-------------------------------------------------------------
           IF (ISWNIT .NE. 'N' .AND. ISTAGE .LT. 7) THEN
               CALL MZ_NFACTO(DYNAMIC,                 !Control
@@ -1068,21 +1068,39 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
               NFAC = 1.0
           ENDIF
 
+          !-------------------------------------------------------------
+          !      Compute Water Stress Factors       
+          ! ------------------------------------------------------------
+          SWFAC  = 1.0
+          TURFAC = 1.0
+          IF(ISWWAT.NE.'N') THEN
+             IF (EOP .GT. 0.0) THEN
+                EP1 = EOP * 0.1
+                IF (TRWUP / EP1 .LT. RWUEP1) THEN
+                   TURFAC = (1./RWUEP1) * TRWUP / EP1
+                ENDIF
+                IF (EP1 .GE. TRWUP) THEN
+                  SWFAC = TRWUP / EP1
+                ENDIF
+             ENDIF
+          ENDIF
+          TURFAC = REAL(INT(TURFAC*1000))/1000
+
 
           !-------------------------------------------------------------
-          !      Compute Water Saturation Factors
+          !      Compute Water Saturation Factors       
           ! ------------------------------------------------------------
 
-          SATFAC = 0.0
+          SATFAC = 0.0    
           SUMEX = 0.0
           SUMRL = 0.0
-
+      
           DO L = 1,NLAYR
 
           !------------------------------------------------------------
-          !PORMIN = Minimum pore space required for supplying oxygen to
-          !         roots for optimum growth and function
-          !TSS(L) = Number of days soil layer L has been saturated
+          !PORMIN = Minimum pore space required for supplying oxygen to 
+          !         roots for optimum growth and function    
+          !TSS(L) = Number of days soil layer L has been saturated 
           !         above PORMIN
           !------------------------------------------------------------
               IF ((SAT(L)-SW(L)) .GE. PORMIN) THEN
@@ -1120,7 +1138,7 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
           !Compare with weather module: PAR = SRAD * 2.0  chp
           PAR = SRAD*PARSR    !PAR local variable
 
-          LIFAC  = 1.5 - 0.768 * ((ROWSPC * 0.01)**2 * PLTPOP)**0.1
+          LIFAC  = 1.5 - 0.768 * ((ROWSPC * 0.01)**2 * PLTPOP)**0.1 
           LAI_eff = LAI
           PCO2  = TABEX (CO2Y,CO2X,CO2,10)
 
@@ -1136,46 +1154,37 @@ C          PCARB = IPAR * RUE * PCO2
           CALL YR_DOY(YRDOY, YR, DOY)
 
           !---------------------------------------------------------------
-          !             Compute the potential evaporationa and carbon gain
+          !    vLeaf canopy carbon gain
+          !    SWFAC/TURFAC are computed above from SPAM's EOP, the same
+          !    EOP SPAM uses to drain the soil (EP = MIN(EOP, TRWUP*10)),
+          !    so plant water stress and soil water depletion stay
+          !    consistent. vLeaf's own transpiration (EOPVLF) is a
+          !    diagnostic only and is not fed back into EOP.
           !---------------------------------------------------------------
-          SWFAC  = 1.0
           NSTRESS = AMIN1(NSTRES, PStres1, KSTRES)
-          CALL MZ_VLEAF(DYNAMIC, LAI, LAI_eff, YR, DOY, SWFAC,
-     &              NSTRESS, CARBO_vLeaf, EOPVLF, WEATHER, CO2) !Output
 
-          EOP = EOPVLF
+          !  Potential (unstressed) carbon gain. PCARB drives N demand
+          !  (PDWI/PGRORT below), so like the RUE-based PCARB it must
+          !  not already include water or nutrient stress.
+          CALL MZ_VLEAF(DYNAMIC, LAI, LAI_eff, YR, DOY, 1.0,
+     &              1.0, CARBO_vLeaf, EOPVLF, WEATHER, CO2)    !Output
+
           IF (PLTPOP .GT. 1.0E-6) THEN
               PCARB = CARBO_vLeaf / PLTPOP
           ELSE
               PCARB = 0.0
           ENDIF
 
-          !-------------------------------------------------------------
-          !      Compute Water Stress Factors
-          ! ------------------------------------------------------------
-          TURFAC = 1.0
-          IF(ISWWAT.NE.'N') THEN
-             IF (EOP .GT. 0.0) THEN
-                EP1 = EOP * 0.1
-                IF (TRWUP / EP1 .LT. RWUEP1) THEN
-                   TURFAC = (1./RWUEP1) * TRWUP / EP1
-                ENDIF
-                IF (EP1 .GE. TRWUP) THEN
-                  SWFAC = TRWUP / EP1
-                ENDIF
-             ENDIF
+          !  Actual carbon gain under today's stress: SWFAC reduces
+          !  stomatal conductance, NSTRESS reduces Vcmax25. With no
+          !  stress the potential pass above is already the answer.
+          IF (SWFAC .LT. 1.0 .OR. NSTRESS .LT. 1.0) THEN
+            CALL MZ_VLEAF(DYNAMIC, LAI, LAI_eff, YR, DOY, SWFAC,
+     &              NSTRESS, CARBO_vLeaf, EOPVLF, WEATHER, CO2) !Output
           ENDIF
-          TURFAC = REAL(INT(TURFAC*1000))/1000
-
-          !---------------------------------------------------------------
-          !    Update the carbon gain and transpiration based on today's
-          !    water stress (SWFAC, computed above from TRWUP/EOP)
-          !---------------------------------------------------------------
-          CALL MZ_VLEAF(DYNAMIC, LAI, LAI_eff, YR, DOY, SWFAC,
-     &              NSTRESS,CARBO_vLeaf, EOPVLF, WEATHER, CO2) !Output
 
 
-!-SPE     PRFT= AMIN1(1.25 - 0.0035*((0.25*TMIN+0.75*TMAX)-25.0)**2,1.0)
+!-SPE     PRFT= AMIN1(1.25 - 0.0035*((0.25*TMIN+0.75*TMAX)-25.0)**2,1.0) 
           TAVGD = 0.25*TMIN+0.75*TMAX
 
 !**************************************************************************
@@ -1216,16 +1225,20 @@ C         superseded for this pathway, not accidentally dropped.
 !          CARBO = PCARB*AMIN1 (PRFT,SWFAC,NSTRES, PStres1,KSTRES)*SLPF
 
           !Reduce CARBO for assimilate pest damage
-          CARBO = CARBO_vLeaf / PLTPOP*SLPF
+          IF (PLTPOP .GT. 1.0E-6) THEN
+              CARBO = CARBO_vLeaf / PLTPOP * SLPF
+          ELSE
+              CARBO = 0.0
+          ENDIF
           CARBO = CARBO - ASMDOT
           CARBO = MAX(CARBO,0.0)
 
           IF (ISTAGE .EQ. 1 .OR. ISTAGE .EQ. 2 .OR. ISTAGE .EQ. 3) THEN
-              !Allow first 5 leaves to expand faster than Phyllochron
+              !Allow first 5 leaves to expand faster than Phyllochron 
               !interval PHINT by reducing PC
               PC     = 1.0
               IF (CUMPH .LT. 5.0) THEN
-                  PC  = 0.66+0.068*CUMPH
+                  PC  = 0.66+0.068*CUMPH      
                   !Sets PC to 0.7 for leaf 1 and 1.0 for leaf 5
               ENDIF
 
@@ -1241,11 +1254,11 @@ C         superseded for this pathway, not accidentally dropped.
           !   ISTAGE = 1 (Emergence to End of Juvenile Stage)
           !-------------------------------------------------------------
           IF (ISTAGE .EQ. 1) THEN
-              !!Allow first 5 leaves to expand faster than Phyllochron
+              !!Allow first 5 leaves to expand faster than Phyllochron 
               !!interval PHINT by reducing PC
               !PC     = 1.0
               !IF (CUMPH .LT. 5.0) THEN
-              !    PC  = 0.66+0.068*CUMPH
+              !    PC  = 0.66+0.068*CUMPH      
               !    !Sets PC to 0.7 for leaf 1 and 1.0 for leaf 5
               !ENDIF
               !
@@ -1257,7 +1270,7 @@ C         superseded for this pathway, not accidentally dropped.
               ! PLAG - Leaf area growth, cm2/plant/day
 !             5/9/07 CHP, JIL, KJB include AGEFAC and PStres2 here
 !               Take the minimum of TURFAC and SATFAC, not the product
-!             PLAG   = 3.0*XN*XN*TI*TURFAC*(1.0-SATFAC)
+!             PLAG   = 3.0*XN*XN*TI*TURFAC*(1.0-SATFAC)    
 
 !             10/10/2007 CHP, JIL
 !             Remove AGEFAC -- too much N stress too early.
@@ -1267,30 +1280,30 @@ C         superseded for this pathway, not accidentally dropped.
               PLAG   = 3.0*XN*XN*TI*
      &              AMIN1(TURFAC,(1.0-SATFAC),PStres2, KSTRES)
 
-              IF (XN .LT. 4.0) THEN
+              IF (XN .LT. 4.0) THEN           
                ! Allow first 4 leaves to expand 30% faster
                   ! XN - number of oldest expanding leaf
-!                PLAG = 4.0*XN*TI*TURFAC*(1.0-SATFAC)
+!                PLAG = 4.0*XN*TI*TURFAC*(1.0-SATFAC)     
 !                  PLAG = 4.0*XN*TI*
-!     &              AMIN1(TURFAC,(1.0-SATFAC),PStres2,AGEFAC)
+!     &              AMIN1(TURFAC,(1.0-SATFAC),PStres2,AGEFAC) 
                   PLAG = 4.0*XN*TI*
-     &              AMIN1(TURFAC,(1.0-SATFAC),PStres2, KSTRES)
+     &              AMIN1(TURFAC,(1.0-SATFAC),PStres2, KSTRES) 
               ENDIF
 
               PLA    = PLA + PLAG
               ! PLA - Total plant leaf area, cm2/plant
-              XLFWT  = (PLA/250.0)**1.25
+              XLFWT  = (PLA/250.0)**1.25      
               ! XLFWT - new leaf weight today, g/plant
               XLFWT  = AMAX1 (XLFWT,LFWT)
-              GROLF  = XLFWT - LFWT
+              GROLF  = XLFWT - LFWT           
               ! GROLF - leaf growth rate, g/plant/day
               !LFWT is initialized in phasei at emergence to 0.2 g/plant
-              GRORT  = CARBO - GROLF
+              GRORT  = CARBO - GROLF          
               ! GRORT - Daily root growth, g/plant/day
 
               IF (GRORT .LE. 0.25*CARBO) THEN
                   GRORT  = CARBO*0.25
-                  SEEDRV = SEEDRV + CARBO - GROLF - GRORT
+                  SEEDRV = SEEDRV + CARBO - GROLF - GRORT 
                   !SEEDRV - reserve carbohydrate in seed for use
                   !      by plant in seedling stage g/plant
                   IF (SEEDRV .LE. 0.0) THEN
@@ -1302,7 +1315,7 @@ C         superseded for this pathway, not accidentally dropped.
 
               LFWT   = LFWT + GROLF
               IF (GROLF .GT. 0.0) THEN
-                SLAN = SUMDTT*PLA/10000.0
+                SLAN = SUMDTT*PLA/10000.0   
                !SLAN - normal leaf senescence since emergence, cm2/plant
               ENDIF
               LFWT   = LFWT - SLAN/600.0      ! Subtract respiration
@@ -1318,11 +1331,11 @@ C         superseded for this pathway, not accidentally dropped.
 
           ELSEIF (ISTAGE .EQ. 2) THEN
 
-              !!Allow first 5 leaves to expand faster than Phyllochron
+              !!Allow first 5 leaves to expand faster than Phyllochron 
               !!interval PHINT by reducing PC
               !PC     = 1.0
               !IF (CUMPH .LT. 5.0) THEN
-              !    PC  = 0.66+0.068*CUMPH
+              !    PC  = 0.66+0.068*CUMPH      
               !    !Sets PC to 0.7 for leaf 1 and 1.0 for leaf 5
               !ENDIF
 !
@@ -1364,7 +1377,7 @@ C         superseded for this pathway, not accidentally dropped.
           ELSEIF (ISTAGE .EQ. 3) THEN
 
 !             JIL 08/11/2005
-!             Do not allow increase in leaf number during
+!             Do not allow increase in leaf number during 
 !               expansion of final leaf.
               IF (SUMDTT > P3 - (2. * PHINT)) THEN
                 CUMPH = CUMPH - TI
@@ -1377,7 +1390,7 @@ C         superseded for this pathway, not accidentally dropped.
               IF (SUMDTT .GE. P3-BSGDD) THEN
                 CUMDTTEG = SUMDTT - (P3-BSGDD)
                 GROEAR = (0.81/(1.0+EXP(-0.02*(CUMDTTEG-210.0))))*CARBO
-!               ! Fraction: 0.0 - 0.56 at silking
+!               ! Fraction: 0.0 - 0.56 at silking 
 
                ELSE
                 CUMDTTEG = 0.0
@@ -1408,7 +1421,7 @@ C         superseded for this pathway, not accidentally dropped.
      &                *AMIN1(AGEFAC,TURFAC,(1.-SATFAC),PStres2, KSTRES)
               ENDIF
 
-! JIL 03/07/2006 Ear dry weight was simulated as part of stem dry weight during this stage.
+! JIL 03/07/2006 Ear dry weight was simulated as part of stem dry weight during this stage. 
 !                Substract ear growth rate from stem growth rate
               IF (GROSTM .GT. GROEAR) THEN
                  GROSTM = GROSTM - GROEAR
@@ -1433,7 +1446,7 @@ C         superseded for this pathway, not accidentally dropped.
               ENDIF
 
               PLA    = (LFWT+GROLF)**0.8*267.0
-              LFWT   = LFWT  + GROLF
+              LFWT   = LFWT  + GROLF 
               SLAN   = PLA/1000.0
               LFWT   = LFWT  - SLAN/600.0    !g/plant
               STMWT  = STMWT + GROSTM
@@ -1465,7 +1478,7 @@ C         superseded for this pathway, not accidentally dropped.
                  GROSTM=(CARBO-GROEAR)*0.5
               ENDIF
 
-!             chp 5/12/2005
+!             chp 5/12/2005   
               GROLF = 0.0
 
               SLAN   = PLA*(0.05+SUMDTT/200.0*0.05)
@@ -1520,12 +1533,12 @@ C         superseded for this pathway, not accidentally dropped.
 
                   GROGRN = RGFILL*GPP*G3*0.001*(0.45+0.55*SWFAC)      !
 
-                  IF (RGFILL.GT.RSGR) THEN
+                  IF (RGFILL.GT.RSGR) THEN   
                       EMAT  = 0                                       !
                       GRORT = 0.0                                     !
                   ELSE                                                !
                       EMAT = EMAT + 1                                 !
-                      IF (FLOAT(EMAT).LE.RSGRT) THEN
+                      IF (FLOAT(EMAT).LE.RSGRT) THEN 
                           GRORT  = 0.0                                !
                       ELSE                                            !
                           SUMDTT = P5                                 !
@@ -1593,7 +1606,7 @@ C         superseded for this pathway, not accidentally dropped.
                       IF (RANC .LT. RMNC) THEN                        !
                           RANC = RMNC                                 !
                       ENDIF                                           !
-
+                                                      
                       VANC   = STOVN/STOVWT                           !
                       IF (VANC .LT. VMNC) THEN                        !
                           VANC = VMNC                                 !
@@ -1615,17 +1628,17 @@ C         superseded for this pathway, not accidentally dropped.
                       ENDIF                                           !
 
                       NSDR   = NPOOL/NSINK                            !
-
+ 
                       IF (NSDR .LT. 1.0) THEN                         !
                           NSINK = NSINK*NSDR                          !
                       ENDIF                                           !
-
+                                                                       
                       IF (NSINK .GT. TNLAB) THEN                      !
                           STOVN = STOVN - TNLAB                       !
                           RNOUT = NSINK - TNLAB                       !
                           ROOTN = ROOTN - RNOUT                       !
                           RANC  = ROOTN / RTWT                        !
-                      ELSE
+                      ELSE 
                           STOVN = STOVN - NSINK                       !
                           VANC  = STOVN / STOVWT                      !
                       ENDIF                                           !
@@ -1640,7 +1653,7 @@ C         superseded for this pathway, not accidentally dropped.
               STMWT  = AMIN1 (STMWT,SWMAX)
 
       !----------------------------------------------------------------
-      !ISTAGE = 6
+      !ISTAGE = 6 
       !(End effective grain filling period to physiological maturity)
       !----------------------------------------------------------------
           ELSEIF (ISTAGE .EQ. 6) THEN
@@ -1659,17 +1672,17 @@ C         superseded for this pathway, not accidentally dropped.
           !------------------------------------------------------------
 
 !         Senescence due to water stress
-          SLFW   = (1-FSLFW) + FSLFW*SWFAC
+          SLFW   = (1-FSLFW) + FSLFW*SWFAC  
 
 !         Senescence due to nitrogen stress
-          SLFN   = (1-FSLFN) + FSLFN*AGEFAC
+          SLFN   = (1-FSLFN) + FSLFN*AGEFAC 
 
 !         Senescence due to phosphorus stress
 !         5/9/07 CHP, JIL, KJB change from PStres2 to PStres1
-          SLFP   = (1-FSLFP) + FSLFP*PSTRES1
+          SLFP   = (1-FSLFP) + FSLFP*PSTRES1 
 
 !         Senescence due to light competition
-          SLFC   = 1.00
+          SLFC   = 1.00        
           IF (LAI .GT. 4.0) THEN
               SLFC = 1.0 - 0.008*(LAI-4.0)
           ENDIF
@@ -1681,12 +1694,12 @@ C         superseded for this pathway, not accidentally dropped.
           ENDIF
           SLFT  = AMAX1 (SLFT,0.0)
 
-!          PLAS  = (PLA-SENLA)*(1.0-AMIN1(SLFW,SLFC,SLFT,SLFN))
-          PLAS  = (PLA-SENLA)*(1.0-AMIN1(SLFW,SLFC,SLFT,SLFN,SLFP))
+!          PLAS  = (PLA-SENLA)*(1.0-AMIN1(SLFW,SLFC,SLFT,SLFN)) 
+          PLAS  = (PLA-SENLA)*(1.0-AMIN1(SLFW,SLFC,SLFT,SLFN,SLFP)) 
 !         Daily rate of leaf senescence
           SENLA = SENLA + PLAS
           SENLA = AMAX1 (SENLA,SLAN)
-          SENLA = AMIN1 (SENLA,PLA)
+          SENLA = AMIN1 (SENLA,PLA)         
           LAI   = (PLA-SENLA)*PLTPOP*0.0001
 
           !------------------------------------------------------------
@@ -1694,10 +1707,10 @@ C         superseded for this pathway, not accidentally dropped.
           !  This is probably a holdover from wheat, and can be deleted
           !------------------------------------------------------------
 
-!         JIL/CHP Added optional TSEN from ecotype file for cold
+!         JIL/CHP Added optional TSEN from ecotype file for cold 
 !         sensitivity threshold.
-!          IF (TMIN .LE. 6.0) THEN
-          IF (TMIN .LE. TSEN) THEN
+!          IF (TMIN .LE. 6.0) THEN 
+          IF (TMIN .LE. TSEN) THEN 
               ICOLD = ICOLD + 1
           ELSE
               ICOLD = 0
@@ -1715,7 +1728,7 @@ C         superseded for this pathway, not accidentally dropped.
               MDATE = YRDOY
               CropStatus = 32 !cold stress
           ELSE
-!         JIL/CHP Added optional CDAY from ecotype file for cold
+!         JIL/CHP Added optional CDAY from ecotype file for cold 
 !         sensitivity.
 !              IF (ICOLD .GE. 15) THEN
               IF (ICOLD .GE. CDAY) THEN
@@ -1734,14 +1747,14 @@ C         superseded for this pathway, not accidentally dropped.
           ENDIF
 
           !------------------------------------------------------------
-          !CROP GROWTH FAILURE DUE TO SEVERE WATER STRESS
-          !End growth and module run if water stress days
-          !exceeds 10 days before Effective grain Filling Period if
+          !CROP GROWTH FAILURE DUE TO SEVERE WATER STRESS  
+          !End growth and module run if water stress days 
+          !exceeds 10 days before Effective grain Filling Period if 
           !LAI <= 0.0
           !------------------------------------------------------------
 
           IF (SWFAC .GT. 0.1) THEN
-              NWSD = 0
+              NWSD = 0                                                  
           ELSE
               NWSD = NWSD + 1
           ENDIF
@@ -1753,8 +1766,8 @@ C         superseded for this pathway, not accidentally dropped.
               WRITE (*,2800)
               IF (IDETO .EQ. 'Y') THEN
                   WRITE (NOUTDO,2800)
-              ENDIF
-              ISTAGE = 6
+              ENDIF   
+              ISTAGE = 6           
               MDATE = YRDOY
               CropStatus = 33  !water stress
           ENDIF
@@ -1764,8 +1777,8 @@ C         superseded for this pathway, not accidentally dropped.
 !--------------------------------------------------------------
 
       ! Leaf Damage
-      ! TF 07/22/2020 Adjusted units for LAIDOT and setting LAIDOT
-      !               initial value to zero
+      ! TF 07/22/2020 Adjusted units for LAIDOT and setting LAIDOT 
+      !               initial value to zero 
           LAIDOT = 0
           IF((LFWT+STMWT).GT.0.0)
      $      STOVN=STOVN - STOVN*(WLIDOT/PLTPOP)/(LFWT+STMWT)
@@ -1773,7 +1786,7 @@ C         superseded for this pathway, not accidentally dropped.
      &      LAIDOT = WLIDOT*(PLA-SENLA)/LFWT  !cm2/m2/day
           IF(PLTPOP.GT.0.0)
      &      LFWT = LFWT - WLIDOT/PLTPOP
-
+           
           PLA = PLA - (LAIDOT/PLTPOP)
           LAI = LAI - LAIDOT/10000
 
@@ -1795,7 +1808,7 @@ C         superseded for this pathway, not accidentally dropped.
             GPP = GPP - GPP*(SWIDOT/PLTPOP)/GRNWT
           ENDIF
 
-          IF(PLTPOP.GT.0.0) THEN
+          IF(PLTPOP.GT.0.0) THEN 
             GRNWT = GRNWT - SWIDOT/PLTPOP
             EARWT = EARWT - SWIDOT/PLTPOP
           ENDIF
@@ -1815,8 +1828,8 @@ C         superseded for this pathway, not accidentally dropped.
               CARBO = 0.001
           ENDIF
 
-          IF (ISWNIT .NE. 'N') THEN
-              IF(CARBO.GT.0.0) THEN
+          IF (ISWNIT .NE. 'N') THEN 
+              IF(CARBO.GT.0.0) THEN  
                 PDWI   = PCARB*(1.0-GRORT/CARBO)
                 PGRORT = PCARB*GRORT/CARBO
               ENDIF
@@ -1884,14 +1897,14 @@ C         superseded for this pathway, not accidentally dropped.
               IF (CANHT .GT. CANHT_POT) THEN
                   CANHT = CANHT_POT
                ENDIF
-          ENDIF
+          ENDIF 
 !** end
           MAXLAI = AMAX1 (MAXLAI,XLAI)      ! Maximum XLAI season
 
           IF(WTLF.GT.0) THEN
               SLA = LAI*10000/WTLF  !Specific leaf area, cm2/g
               DUMMY = PLA/LFWT
-          ELSE
+          ELSE    
               SLA = 0
           ENDIF
 
@@ -1916,12 +1929,12 @@ C         superseded for this pathway, not accidentally dropped.
           SEEDNO=GPSM               !Seed no./m2
 
           IF(GPP.GT.0) THEN
-!              PODNO = SEEDNO/GPP    !Pod (ear) No/m2
+!              PODNO = SEEDNO/GPP    !Pod (ear) No/m2 
               PODNO = EARS
           ELSE
               PODNO = 0
           ENDIF
-
+          
           IF (PODWT .GT. 0.1) THEN
               SHELPC = SDWT*100./PODWT
           ELSE
@@ -1948,19 +1961,19 @@ C         superseded for this pathway, not accidentally dropped.
           ! Compute Plant Nitrogen Variables for Output
           !------------------------------------------------------------
 
-          WTNUP = WTNUP + TRNU*PLTPOP    !Total N uptake (g N/m2)
+          WTNUP = WTNUP + TRNU*PLTPOP    !Total N uptake (g N/m2)  
           WTNCAN = (STOVN+GRAINN)*PLTPOP !Nitrogen in canopy (g N/m2)
           WTNSD = GRAINN*PLTPOP  !Nitrogen in grain (g N/m2)
-          IF ((LFWT+STMWT) .GT. 0.0) THEN
-              WTNLF = STOVN * (LFWT/STOVWT) * PLTPOP
+          IF ((LFWT+STMWT) .GT. 0.0) THEN     
+              WTNLF = STOVN * (LFWT/STOVWT) * PLTPOP 
                                   !Nitrogen in leaf, g/m2
-              WTNST = STOVN * (STMWT/(LFWT+STMWT)) * PLTPOP
+              WTNST = STOVN * (STMWT/(LFWT+STMWT)) * PLTPOP 
                                   !Nitrogen in stem, g/m2
           ELSE
-              WTNLF = 0.0
+              WTNLF = 0.0 
               WTNST = 0.0
           ENDIF
-
+      
           WTNVEG=WTNLF+WTNST     !Nitrogen in vegetative tissue (g/m2)
 
 
@@ -1987,13 +2000,13 @@ C         superseded for this pathway, not accidentally dropped.
           ENDIF
 
           IF( (WTLF+STMWT).GT.0.AND.PLTPOP.GT.0) THEN
-              PCNVEG = (WTNLF+WTNST)/((LFWT+STMWT)*PLTPOP)*100
+              PCNVEG = (WTNLF+WTNST)/((LFWT+STMWT)*PLTPOP)*100  
           ELSE
               PCNVEG = 0.0
           ENDIF
 
           IF(STMWT.GT.0.0.AND.PLTPOP.GT.0.0) THEN
-              PCNST = WTNST/(STMWT*PLTPOP)*100
+              PCNST = WTNST/(STMWT*PLTPOP)*100 
           ELSE                            !Concentration of N in stems
               PCNST = 0.0
           ENDIF
@@ -2004,7 +2017,7 @@ C         superseded for this pathway, not accidentally dropped.
               PCNRT = 0.0
           ENDIF
 
-          IF (ISWPHO .NE. 'N') THEN
+          IF (ISWPHO .NE. 'N') THEN 
             CALL P_Ceres (DYNAMIC, ISWPHO,                    !Input
      &        CumLeafSenes, DLAYR, DS, FILECC, MDATE, NLAYR,  !Input
      &        PCNVEG, PLTPOP, PODWT, RLV, RTDEP, RTWTO,       !Input
@@ -2047,7 +2060,7 @@ C         superseded for this pathway, not accidentally dropped.
 
 !         Compute N lost in leaf senescence
 !         N in senesced leaves - calculate based on today's N content
-          CumLfNSenes = CumLfNSenes +
+          CumLfNSenes = CumLfNSenes + 
      &               (CumLeafSenes - CumLeafSenesY) * STOVN / STOVWT
 
 !----------------------------------------------------------------------
@@ -2057,10 +2070,10 @@ C         superseded for this pathway, not accidentally dropped.
 !
 !----------------------------------------------------------------------
 !----------------------------------------------------------------------
-
+      
       ELSEIF(DYNAMIC.EQ.OUTPUT) THEN
 
-!          WTNUP = WTNUP + TRNU*PLTPOP
+!          WTNUP = WTNUP + TRNU*PLTPOP  
               !Total N uptake, g/m2  Moved to mz_roots.for
           YIELD = GRNWT*10.0*EARS
           IF (GPP.GT. 0) THEN
@@ -2082,7 +2095,7 @@ C         superseded for this pathway, not accidentally dropped.
               ENDIF
           ENDIF
 
-          IF(ISTAGE.EQ.6) TOTNUP      = GNUP + APTNUP
+          IF(ISTAGE.EQ.6) TOTNUP      = GNUP + APTNUP  
               !Need to track the logic for this...
 
           CALL P_Ceres (DYNAMIC, ISWPHO,                    !Input
@@ -2108,7 +2121,7 @@ C         superseded for this pathway, not accidentally dropped.
       ELSEIF(DYNAMIC.EQ.SEASEND) THEN
 
         STOVER  = BIOMAS*10.0-YIELD
-        YIELDB  = YIELD/62.8
+        YIELDB  = YIELD/62.8  
             ! Yield in bu/ac at 0% moisture content
         XANC   = TANC*100.0
 
@@ -2121,13 +2134,13 @@ C         superseded for this pathway, not accidentally dropped.
             GNUP = GRAINN*EARS*10.0
           ENDIF
         ENDIF
-
+        
 !       chp 2018-07-19 - default to zero removal of by-product from field
 !       This default behavior is already handled in the input module.
 !       IF (HARVFRAC(2) .LE. 0.0) THEN
 !              HARVFRAC(2) = 1.0
 !        ENDIF
-
+        
         CALL P_Ceres (DYNAMIC, ISWPHO,                    !Input
      &      CumLeafSenes, DLAYR, DS, FILECC, MDATE, NLAYR,  !Input
      &      PCNVEG, PLTPOP, PODWT, RLV, RTDEP, RTWTO,       !Input
@@ -2144,6 +2157,11 @@ C         superseded for this pathway, not accidentally dropped.
         SENESCE % ResLig(0) = CumLeafSenes * 0.4 * PLIGLF
 !       N in senesced leaves
         SENESCE % ResE(0,1) = CumLfNSenes
+
+!       vLeaf season summary (leaf-solve convergence warning)
+        CALL YR_DOY(YRDOY, YR, DOY)
+        CALL MZ_VLEAF(DYNAMIC, LAI, LAI_eff, YR, DOY, SWFAC,
+     &     NSTRESS, CARBO_vLeaf, EOPVLF, WEATHER, CO2)  !Output
 
       ENDIF       !Endif for DYNAMIC LOOP
 
@@ -2177,8 +2195,8 @@ C         superseded for this pathway, not accidentally dropped.
 ! CANWA       !Canopy width, cm (not used)
 ! CARBO       !Daily biomass production, g/plant/day
 ! CARBOT      !Consecutive days where CARBO is less than .001 before plant matures due to stress
-! CMAT        !Counts consecutive days that CARBO is less than 0.001
-! CNSD1       !Cumulative nitrogen deficit factor on photosynthesis in
+! CMAT        !Counts consecutive days that CARBO is less than 0.001    
+! CNSD1       !Cumulative nitrogen deficit factor on photosynthesis in 
 !              each stage used to compute avg. stress during stage
 ! CNSD2       !Cumulative nitrogen deficit on growth in each stage used
 !              to compute avg. stress during stage
@@ -2216,13 +2234,13 @@ C         superseded for this pathway, not accidentally dropped.
 ! GROLF       !Leaf growth rate, g/plant/day
 ! GRORT       !Root growth rate, g/plant/day
 ! GROSTM      !Stem growth rate, g/plant/day
-! HI          !Ratio of seed weight (SDWT) to weight of above-ground portion of
+! HI          !Ratio of seed weight (SDWT) to weight of above-ground portion of 
 !              plant (TOPWT) (g[seed] / g[tops])
-! HIP         !Ratio of pod weight (PODWT) to weight of above-ground portion of
+! HIP         !Ratio of pod weight (PODWT) to weight of above-ground portion of 
 !              plant (TOPWT) (g[pods] / g[tops])
 ! I           !Counter
 ! ICOLD       !Cumulative number of days when TMIN is less than 6 C
-! ICSDUR      !Calendar day accumulator for each growth stage
+! ICSDUR      !Calendar day accumulator for each growth stage   
 ! IDETO*1     !Screen output switch, (Y/N)
 ! INTEGR      !Program control variable to execute code to integrate daily rate variables (value=4)
 ! ISTAGE      !Growth stage (integer)
@@ -2275,7 +2293,7 @@ C         superseded for this pathway, not accidentally dropped.
 ! PLAS        !The rate of senescence of leaf area on one plant - sq. cm/day
 ! PLTPOP      !Plant population, plants/m2
 ! PORMIN      !Minimum pore space volume required for supplying oxygen to roots for optimum
-!             ! growth and function (0-100%)
+!             ! growth and function (0-100%) 
 ! PPLTD       ! Percent of plants destroyed today, %/m2/d
 ! PRFTC       !Array containing base, optimum and maximum temperature for function reducing photosynthesis due to temperature.
 ! PRFT        !Photosynthetic reduction factor for low and high temperatures
@@ -2299,7 +2317,7 @@ C         superseded for this pathway, not accidentally dropped.
 ! RTWT        !Root weight, g/plant
 ! RTWTE       !Root weight at emergence, g/plant
 ! RTWTO       !Root weight, g/m2
-! RUE         !Radiation use efficiency, g CH2O/MJ Par
+! RUE         !Radiation use efficiency, g CH2O/MJ Par        
 ! ROWSPC      !Row spacing, cm
 ! RWUEP1      !Factor to modify water stress for cell expansion (in species file), mm/day
 ! RWUMX       ! Max root water uptake
@@ -2340,7 +2358,7 @@ C         superseded for this pathway, not accidentally dropped.
 ! SUMRL       !Sum of root length density (integral over depth)
 ! SW(L)       !Soil water content in layer L, cm3 water/cm3 soil
 ! SWEXF       !Soil water excess factor (0-1.0)
-! SWFAC       !Soil water stress effect on growth (0-1), 1 is no stress, 0 is full
+! SWFAC       !Soil water stress effect on growth (0-1), 1 is no stress, 0 is full    
 ! SWIDOT      !Seed loss due to pests, g seed/m2/day
 ! SWMAX       !Maximum stem weight (set in phasei) (move to grosub)
 ! SWMIN       !Minimum value stem weight can reach durign linear grain filling g/plant
