@@ -1,152 +1,171 @@
-<p align="center">
-<img width="400px" alt="DSSAT" src="https://dssat.net/wp-content/uploads/2014/05/DSSAT-color-update.png">
-</p>
-<p align="center">
-<a href="http://dssat.net">[DSSAT Homepage]</a> | 
-<a href="http://dssat.net/about">[About DSSAT]</a> | 
-<a href="http://dssat.net/contact-us">[Contact us]</a>
-</p>
-<hr>
-The Decision Support System for Agrotechnology Transfer (DSSAT) Version is a software 
-application program that comprises crop simulation models for more than 45 crops. The most recent version is DSSAT v4.8.5 released in December, 2024 
-<a href="https://github.com/DSSAT/dssat-csm-os/releases/tag/v4.8.5.0">(Check latest RELEASE here)</a>. 
+# vLeaf-DSSAT
 
-For DSSAT to be functional, it is 
-supported by data base management programs for soil, weather, crop management, and experimental data, and by utilities and application 
-programs. The crop simulation models simulate growth and development and predict yield, yield components and many other traits and variables as a 
-function of the soil-plant-atmosphere dynamics.
+vLeaf-DSSAT couples **vLeaf**, a mechanistic leaf- and canopy-scale model of
+photosynthesis, stomatal conductance and leaf energy balance, into the
+**CERES-Maize** crop model of the
+[DSSAT Cropping System Model](https://github.com/DSSAT/dssat-csm-os) (CSM).
 
-Questions about usage of the DSSAT Crop Modeling Ecosystem <a href="http://dssat.net/contact-us">[contact us]</a>.
+In stock CERES-Maize, daily carbon gain is empirical: intercepted light ×
+radiation-use efficiency, reduced by stress multipliers. In vLeaf-DSSAT that
+calculation is replaced by an hourly, physically based simulation of the
+sunlit and shaded parts of the canopy. Water stress acts on stomatal
+conductance, and nutrient stress acts on photosynthetic capacity, instead of
+being multiplied onto the result.
 
-Do not know how to use DSSAT? Consider participating in the <a href="https://dssat.net/training/upcoming-workshop/">[upcoming DSSAT training workshop]</a>
+This repository is built on the DSSAT CSM source code (v4.8.5). Everything
+outside the vLeaf components is DSSAT as released upstream; other crops and
+the rest of CERES-Maize behave exactly as in DSSAT.
 
-Read more about DSSAT at <a href="http://dssat.net/about">[DSSAT Homepage]</a>
+> **Status: research prototype.** The coupling builds and runs, but vLeaf's
+> default parameters are placeholders and are not yet calibrated. Calibrate
+> them (see [Configuring vLeaf](#configuring-vleaf)) before using the results.
 
-## The directory structure ##
+## How vLeaf works inside CERES-Maize
 
-DSSAT cropping system model (CSM) design is a modular structure in which components 
-separate along scientific discipline lines and are structured to allow easy replacement 
-or addition of modules. It has one Soil module, a Crop Template module which can simulate 
-different crops by defining species input files, an interface to add individual crop 
-models if they have the same design and interface, a weather module, and a module for 
-dealing with competition for light and water among the soil, plants, and atmosphere. 
-It is also designed for incorporation into various application packages, ranging from 
-those that help researchers adapt and test the CSM to those that operate the DSSAT /CSM 
-to simulate production over time and space for different purposes.
+For every hour of every simulated day, vLeaf:
 
-### Structure of the code ###
-    .
-    ├── build
-    │   └── ...
-    ├── cmake
-    │   └── Modules
-    │       ├── SetCompileFlag.cmake
-    │       └── SetFortranFlags.cmake
-    ├── Data
-    |   ├── Genotype
-    |   ├── Pest
-    |   └── StandardData 
-    ├── <source files>
-    ├── CMakeLists.txt
-    ├── distclean.cmake
-    ├── README.md
-    └── ...
+1. takes DSSAT's own hourly weather (air temperature, radiation, humidity,
+   wind, solar angle, diffuse fraction) and atmospheric CO₂;
+2. splits the canopy into sunlit and shaded leaf area and computes the
+   radiation each absorbs and its photosynthetic capacity (Vcmax₂₅);
+3. solves, for each fraction, a coupled system of:
+   - C4 photosynthesis (Collatz-type),
+   - Ball-Berry stomatal conductance,
+   - leaf energy balance (leaf temperature, sensible and latent heat),
+   - leaf boundary-layer conductance;
+4. integrates hourly net assimilation (including night-time leaf
+   respiration) and transpiration to daily totals.
 
-## Compiling the code ##
+The daily carbon gain replaces the radiation-use-efficiency calculation in
+`MZ_GROSUB.for`. DSSAT's soil-water module (SPAM) still owns the water
+balance: plant water stress is computed from SPAM's transpiration demand,
+and vLeaf's own transpiration is reported as a diagnostic.
 
-The code is compatible with the CMake utility for generating MakeFile
-and setting up projects for a variety of IDEs and compilers. To use this feature, 
-first download and install CMake. Then set up a CMake project by pointing to the
-source code directory and the build directory.
+The full design, including units, the order of calls, and the
+simplifications made, is documented in
+[`Plant/CERES-Maize/VLEAF_COUPLING.md`](Plant/CERES-Maize/VLEAF_COUPLING.md).
 
-## Configuring the build ##
+## What differs from DSSAT
 
-It is usually preferred that you do an out-of-source build.  To do this, create a `build/` directory at the top level of your project and build there. This folder is created to organize all working files inside it, avoiding messing up your source folder. During compilation and linking, working folders are created automatically inside this folder. Any libraries created end up in `mod/`, as well as compiled Fortran `.mod` files.  The executable will end up in `bin/`.
+All vLeaf code lives in `Plant/CERES-Maize/`:
 
-    $ mkdir build
-    $ cd build
-    $ cmake ..
-    $ make
-    
-When you do this, temporary CMake files will not be created in your `src/` directory.  
+| File | Role |
+|---|---|
+| `MZ_VLEAF.for` | vLeaf driver: hourly loop, daily totals, hourly output |
+| `VLEAF_UTILS.for` | Reads `MY_PARAMS.TXT`; converts DSSAT's hourly weather into vLeaf inputs |
+| `VLEAF_PARAMS.f90` | Season-long vLeaf parameters |
+| `can_Weather.f90`, `canopy_Photo.f90` | Sunlit/shaded radiation and photosynthetic capacity |
+| `leaf_step_mod.f90` | Per-hour solver coupling the leaf modules |
+| `c4_photosynth.f90`, `stomata.f90`, `enbal_mod.f90`, `boundary.f90` | Leaf physiology and physics |
+| `daily_carbon_mod.f90` | Hourly → daily carbon and transpiration |
 
-As written, this template will allow you to specify one of three different sets of compiler flags.  The default is DEBUG.  You can change this using to RELEASE or DEBUG using
+Changes to existing DSSAT files:
 
-    $ cmake .. -DCMAKE_BUILD_TYPE=DEBUG
-    
-or
+- `Plant/CERES-Maize/MZ_GROSUB.for`: calls vLeaf and uses its carbon gain
+  in place of the radiation-use-efficiency calculation.
+- `CMakeLists.txt`: adds the vLeaf source files to the build.
 
-    $ cmake .. -DCMAKE_BUILD_TYPE=RELEASE
+## Building
 
-You can provide all kind of information CMake. See more information at [[CMake Tutorial](https://cmake.org/cmake/help/latest/guide/tutorial/index.html)].
+The build is the standard DSSAT CMake build. You need a Fortran compiler
+(gfortran or Intel) and CMake. On macOS: `brew install gcc cmake`.
 
-One usable examples could be:
+```sh
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=<install-dir>
+cmake --build . -j8
+cmake --install .
+```
 
-    $ cmake -G "Unix Makefiles" -DCMAKE_Fortran_COMPILER=ifort ..
+`-DCMAKE_BUILD_TYPE=DEBUG` (the default) adds floating-point-exception
+trapping and array-bounds checks, which is useful when changing vLeaf code.
 
-In this example we are specifying the fortran compiler and the kind of project we want as result (make file project). 
+The install directory gets the `dscsm048` executable, the `DSSATPRO.L48`
+profile and DSSAT's standard data (cultivar files, codes, CO₂ data).
+DSSAT limits file paths to about 100 characters, so keep the install and run
+directories on short paths.
 
-### CMakeLists.txt ###
+## Running
 
-This file contains all the configuration needed to set up the project.  
-Edit this file to make your own configuration and add new projects. 
-Comment/Uncomment any lines pertaining to options you may need. 
+vLeaf-DSSAT runs exactly like DSSAT, using a maize experiment run with the
+CERES-Maize model (`MZCER048`). For example, from a directory containing
+the experiment, weather and soil files:
 
-### distclean.cmake ###
+```sh
+<install-dir>/dscsm048 A UFGA8201.MZX
+```
 
-This is a CMake script that will remove all files and folder that are created after running `make`.  You can run this code in one of two ways:
+Example experiments, weather and soil files are in DSSAT's data repository,
+[DSSAT/dssat-csm-data](https://github.com/DSSAT/dssat-csm-data).
 
-* Execute `cmake -P distclean.cmake`. (The `-P` option to `cmake` will execute a CMake script)
-* Execute `make distclean` after your Makefile has been generated.
+In addition to DSSAT's normal outputs, each run writes:
 
-### cmake/Modules/ ###
+- `VLEAF_HOURLY.OUT`: hourly sunlit and shaded leaf area, absorbed radiation,
+  net assimilation, conductances, leaf temperatures, energy fluxes,
+  transpiration, stress factors and solver convergence flags, with `RUN` and
+  `TRNO` columns to separate treatments.
+- A season summary in `WARNING.OUT` if any hourly leaf solve failed to
+  converge.
 
-This directory contains CMake scripts that aid in configuring the build system.
+## Configuring vLeaf
 
-###### SetCompileFlag.cmake ######
+vLeaf parameters are read at the start of each season from an optional
+`MY_PARAMS.TXT` in the run directory, one `key value` pair per line. Any key
+that is left out keeps its default:
 
-This file defines a function that will test a set of compiler flags to see which one works and adds that flag to a list of compiler flags.  This is used to set compile flags when you don't know which compiler will be used.
+```text
+vcmax25  55.0
+slope    3.0
+eta      1.0
+```
 
-###### SetFortranFlags.cmake ######
+| Key | Meaning | Default |
+|---|---|---|
+| `vcmax25` | Maximum carboxylation capacity at 25 °C (µmol m⁻² s⁻¹) | 55.0 |
+| `rd25` | Leaf dark respiration as a fraction of Vcmax | 0.05 |
+| `slope` | Ball-Berry slope | 3.0 |
+| `intercept` | Ball-Berry intercept g₀ (mol m⁻² s⁻¹) | 0.008 |
+| `eta` | Fraction of assimilated carbon kept as dry matter after whole-plant respiration | 1.0 |
+| `switch` | `1` solves leaf temperature from the energy balance; any other value sets leaf temperature to air temperature | 1 |
 
-This file uses the function from `SetCompilerFlag.cmake` to set the DEBUG, TESTING, and RELEASE compile flags for your build.  You might want to inspect this file and edit the flags to your liking.
+The file also accepts `jmax25`, `vpmax25`, `theta`, `gbs`, `alpha`, `x`,
+`sco25` and `vpr25`, but the current C4 formulation does not use them.
 
-### Data ###
+## Keeping up to date with DSSAT
 
-This folder contains model-specific data for genotypes, pest, standard model data, code files, DSSATPRO files, etc.
+This repository tracks the DSSAT source as a git remote:
 
-    .
-    ├── Genotype
-    ├── Pest
-    ├── StandardData
-    ├── Data.CDE
-    ├── Detail.CDE
-    ├── DSSATPRO.v48
-    ├── ...
-    └── README.md
- 
-The files in this repository can be combined with the files in the Data repository (https://github.com/DSSAT/dssat-csm-data) to 
-replicate the directory structure of the Windows installation of DSSAT v4.8.2 (e.g., with the Genotype directory at the
-same level as the Alfalfa and other crops directories and the CDE files in the root directory).
+```sh
+git remote add upstream https://github.com/DSSAT/dssat-csm-os.git
+git fetch upstream
+git merge upstream/develop
+```
 
-## Best DSSAT coding practices ##
-See: [Non-threatening best practice DSSAT Fortran coding guidelines](https://dssat.net/non-threatening-best-practice-dssat-fortran-coding-guidelines). 
+Changes made upstream to `MZ_GROSUB.for` or `CMakeLists.txt` may need to be
+merged by hand.
 
+## License and acknowledgement
 
-## How to Cite DSSAT ##
+vLeaf-DSSAT is derived from the DSSAT Cropping System Model, Copyright (c)
+DSSAT Foundation, and is distributed under the same BSD 3-Clause license;
+see [`license.txt`](license.txt). Compiled binaries may include GCC runtime
+libraries; see [`NOTICE.md`](NOTICE.md).
 
-If you are planning to use DSSAT in any reports or publications, please make sure to refer to the version number you used.
-The version and sub-version numbers can be found in the top section of your output files, e.g., 4.8.X (replace X with current version).
-In addition, please use the following three references for DSSAT and the Cropping System Model. Other related publications can be found
-in the Documentation section under DSSAT References and Model References.
+This project is independent. It is not affiliated with, maintained by or
+endorsed by the DSSAT Foundation. For the official DSSAT software, see
+[dssat.net](https://dssat.net) and
+[DSSAT/dssat-csm-os](https://github.com/DSSAT/dssat-csm-os).
+
+## Citing
+
+If you use vLeaf-DSSAT, please cite DSSAT and the DSSAT Cropping System Model:
 
 Hoogenboom, G., C.H. Porter, K.J. Boote, V. Shelia, P.W. Wilkens, U. Singh, J.W. White, S. Asseng, J.I. Lizaso, L.P. Moreno, W. Pavan, R. Ogoshi, L.A. Hunt, G.Y. Tsuji, and J.W. Jones. 2019. The DSSAT crop modeling ecosystem. In: p.173-216 [K.J. Boote, editor] Advances in Crop Modeling for a Sustainable Agriculture. Burleigh Dodds Science Publishing, Cambridge, United Kingdom (https://dx.doi.org/10.19103/AS.2019.0061.10).
-
-See also: [The DSSAT crop modeling ecosystem](https://dssat.net/wp-content/uploads/2020/03/The-DSSAT-Crop-Modeling-Ecosystem.pdf)
 
 Hoogenboom, G., C.H. Porter, V. Shelia, K.J. Boote, U. Singh, W. Pavan, F.A.A. Oliveira, L.P. Moreno-Cadena, T.B. Ferreira, J.W. White, J.I. Lizaso, D.N.L. Pequeno, B.A. Kimball, P.D. Alderman, K.R. Thorp, S.V. Cuadra, M.S. Vianna, F.J. Villalobos, W.D. Batchelor, S. Asseng, M.R. Jones, A. Hopf, H.B. Dias, A. Jintrawet, R. Jaikla, E. Memic, L.A. Hunt, and J.W. Jones. 2024. Decision Support System for Agrotechnology Transfer (DSSAT) Version 4.8.5 (www.DSSAT.net). DSSAT Foundation, Gainesville, Florida, USA.
 
 Jones, J.W., G. Hoogenboom, C.H. Porter, K.J. Boote, W.D. Batchelor, L.A. Hunt, P.W. Wilkens, U. Singh, A.J. Gijsman, and J.T. Ritchie. 2003. The DSSAT cropping system model. European Journal of Agronomy 18:235-265 (https://doi.org/10.1016/S1161-0301(02)00107-7).
 
-See also: [The DSSAT cropping system model](https://dssat.net/jones_2003_the_dssat_cropping_system_model).
+## Author
 
+Antriksh Srivastava ([@GitHub-srivastava](https://github.com/GitHub-srivastava))
